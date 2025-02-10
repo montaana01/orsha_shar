@@ -1,0 +1,51 @@
+ErrorDocument 403 /page16893735.html
+ErrorDocument 404 /page16893735.html
+
+DirectoryIndex page16831385.html
+
+RewriteEngine On
+
+RewriteCond %{HTTP:X-Forwarded-Proto} =http
+RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+RewriteCond %{REQUEST_FILENAME} /robots.txt
+RewriteCond "%{DOCUMENT_ROOT}/robots_%{HTTP_HOST}.txt" -f
+RewriteRule ^(.*)$ robots_%{HTTP_HOST}.txt [NC,L]
+RewriteRule ^tematicheskiye$ page16834900.html [NC]
+RewriteRule ^tematicheskiye/$ page16834900.html [NC]
+
+RewriteRule ^bubbles$ page17124782.html [NC]
+RewriteRule ^bubbles/$ page17124782.html [NC]
+
+RewriteRule ^fountains$ page16998401.html [NC]
+RewriteRule ^fountains/$ page16998401.html [NC]
+
+RewriteRule ^figures$ page16852621.html [NC]
+RewriteRule ^figures/$ page16852621.html [NC]
+
+RewriteRule ^boxes$ page16834119.html [NC]
+RewriteRule ^boxes/$ page16834119.html [NC]
+
+RewriteRule ^bouquets$ page17015616.html [NC]
+RewriteRule ^bouquets/$ page17015616.html [NC]
+
+RewriteRule ^bottom$ page16846376.html [NC]
+RewriteRule ^bottom/$ page16846376.html [NC]
+
+RewriteRule ^numerals$ page17355325.html [NC]
+RewriteRule ^numerals/$ page17355325.html [NC]
+
+RewriteRule ^photozony$ page16833487.html [NC]
+RewriteRule ^photozony/$ page16833487.html [NC]
+
+RewriteRule ^home$ page16831385.html [NC]
+RewriteRule ^home/$ page16831385.html [NC]
+
+RewriteRule ^pages/sorry$ page16893735.html [NC]
+RewriteRule ^pages/sorry/$ page16893735.html [NC]
+
+RewriteRule ^pages/top$ page16909836.html [NC]
+RewriteRule ^pages/top/$ page16909836.html [NC]
+
+RewriteRule ^favicon.ico$ https://static.tildacdn.com/tild3033-3638-4235-a631-313164343635/favicon.ico [R=302,L]
+

@@ -1,0 +1,4 @@
+User-Agent: *
+Disallow: /
+Sitemap: https://orshas.tilda.ws/sitemap.xml
+Host: https://orshas.tilda.ws
