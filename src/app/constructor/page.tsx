@@ -1,5 +1,7 @@
 import { ConstructorClient } from './ConstructorClient';
 
+export const dynamic = 'force-dynamic';
+
 export default function ConstructorPage({ searchParams }: { searchParams: { type?: string } }) {
   return (
     <section className="section">
