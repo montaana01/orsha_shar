@@ -1,0 +1,45 @@
+{
+  "name": "orsha-shar-site",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "check": "npm run format:check && npm run lint && npm run typecheck",
+    "prepare": "husky install"
+  },
+  "dependencies": {
+    "next": "14.2.35",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "20.2.0",
+    "@commitlint/config-conventional": "20.2.0",
+    "@types/node": "20.11.30",
+    "@types/react": "18.2.79",
+    "@types/react-dom": "18.2.25",
+    "eslint": "8.57.1",
+    "eslint-config-next": "^16.1.1",
+    "husky": "9.1.7",
+    "lint-staged": "16.2.7",
+    "prettier": "3.7.4",
+    "typescript": "5.4.5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,md,yml,yaml,css,scss}": [
+      "prettier --write"
+    ],
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
