@@ -1,6 +1,12 @@
+'use client';
+
+import { useSearchParams } from 'next/navigation';
 import { ConstructorClient } from './ConstructorClient';
 
-export default function ConstructorPage({ searchParams }: { searchParams: { type?: string } }) {
+export default function ConstructorPage() {
+  const searchParams = useSearchParams();
+  const type = searchParams.get('type') ?? undefined;
+
   return (
     <section className="section">
       <div className="section__head">
@@ -10,7 +16,7 @@ export default function ConstructorPage({ searchParams }: { searchParams: { type
         </p>
       </div>
 
-      <ConstructorClient initialType={searchParams.type} />
+      <ConstructorClient initialType={type} />
     </section>
   );
 }
