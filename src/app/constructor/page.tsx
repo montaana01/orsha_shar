@@ -4,6 +4,9 @@ import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ConstructorClient } from './ConstructorClient';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 function ConstructorPageContent() {
   const searchParams = useSearchParams();
   const type = searchParams.get('type') ?? undefined;
