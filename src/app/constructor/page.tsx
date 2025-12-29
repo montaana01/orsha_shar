@@ -1,9 +1,10 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ConstructorClient } from './ConstructorClient';
 
-export default function ConstructorPage() {
+function ConstructorPageContent() {
   const searchParams = useSearchParams();
   const type = searchParams.get('type') ?? undefined;
 
@@ -18,5 +19,13 @@ export default function ConstructorPage() {
 
       <ConstructorClient initialType={type} />
     </section>
+  );
+}
+
+export default function ConstructorPage() {
+  return (
+    <Suspense fallback={null}>
+      <ConstructorPageContent />
+    </Suspense>
   );
 }
