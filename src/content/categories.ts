@@ -33,7 +33,7 @@ export const categories: Category[] = [
     title: 'Коробка сюрприз',
     description:
       'Такая коробка станет отличным сюрпризом: помещается в машине, легко проходит в дверной проём, а кроме шаров внутрь можно положить подарок.',
-    heroImage: '/gallery/boxes/img01.jpg'
+    heroImage: '/gallery/boxes/img01.webp'
   },
   {
     slug: 'bouquets',
@@ -58,7 +58,7 @@ export const categories: Category[] = [
     title: 'Тематические украшения',
     description:
       'Украшение свадеб, выпускных, линеек. Подарки на дни рождения и юбилеи. Оформление выписки из роддома.',
-    heroImage: '/gallery/tematicheskiye/img01.jpg'
+    heroImage: '/gallery/tematicheskiye/img01.webp'
   },
   {
     slug: 'bubbles',

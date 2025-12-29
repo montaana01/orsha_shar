@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   description:
     'Гелиевые шары, фотозоны, украшения для торжеств в Орше. Бесплатная доставка по г. Орша.',
   icons: {
-    icon: '/assets/icon.png',
-    apple: '/assets/icon.png'
+    icon: '/assets/icon.webp',
+    apple: '/assets/icon.webp'
   },
   openGraph: {
     type: 'website',
