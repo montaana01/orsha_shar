@@ -1,8 +1,15 @@
+'use client';
+
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ConstructorClient } from './ConstructorClient';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
-export default function ConstructorPage({ searchParams }: { searchParams: { type?: string } }) {
+function ConstructorPageContent() {
+  const searchParams = useSearchParams();
+  const type = searchParams.get('type') ?? undefined;
   return (
     <section className="section">
       <div className="section__head">
@@ -12,7 +19,15 @@ export default function ConstructorPage({ searchParams }: { searchParams: { type
         </p>
       </div>
 
-      <ConstructorClient initialType={searchParams.type} />
+      <ConstructorClient initialType={type} />
     </section>
+  );
+}
+
+export default function ConstructorPage() {
+  return (
+    <Suspense fallback={null}>
+      <ConstructorPageContent />
+    </Suspense>
   );
 }
