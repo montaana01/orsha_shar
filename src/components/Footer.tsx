@@ -20,9 +20,6 @@ export function Footer() {
               <a href={`mailto:${site.contacts.email}`}>{site.contacts.email}</a>
             </li>
           </ul>
-          <p className="muted">
-            Бесплатная доставка по г. Орша и а.г. Бабиничи. По Оршанскому району — платная доставка.
-          </p>
         </div>
 
         <div className="footer__col">
