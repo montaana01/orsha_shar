@@ -4,7 +4,7 @@ import { site } from '@/content/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
-  const staticRoutes = ['', '/constructor', '/privacy'];
+  const staticRoutes = ['', '/configurator', '/privacy'];
 
   return [
     ...staticRoutes.map((path) => ({

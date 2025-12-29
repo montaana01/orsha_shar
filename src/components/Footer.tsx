@@ -64,7 +64,7 @@ export function Footer() {
               <Link href="/">Главная</Link>
             </li>
             <li>
-              <Link href="/constructor">Конструктор</Link>
+              <Link href="/configurator">Конфигуратор</Link>
             </li>
             <li>
               <Link href="/privacy">Политика cookies</Link>

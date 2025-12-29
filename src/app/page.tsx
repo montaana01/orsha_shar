@@ -97,18 +97,18 @@ export default function HomePage() {
 
       <section className="section">
         <div className="section__head">
-          <h2 className="section__title">Конструктор</h2>
+          <h2 className="section__title">Конфигуратор</h2>
           <p className="section__subtitle">
-            Хотите быстрее согласовать заказ? Используйте конструктор: он сформирует текст заявки, который можно сразу отправить.
+            Хотите быстрее согласовать заказ? Используйте конфигуратор: он сформирует текст заявки, который можно сразу отправить.
           </p>
         </div>
         <div className="panel panel--cta">
           <div>
-            <h3 className="panel__title">Конструктор фотозон и фонтанов</h3>
+            <h3 className="panel__title">Конфигуратор фотозон и фонтанов</h3>
             <p className="muted">Без регистрации и без хранения данных — только генерация заявки.</p>
           </div>
-          <Button href="/constructor" variant="primary">
-            Открыть конструктор
+          <Button href="/configurator" variant="primary">
+            Открыть конфигуратор
           </Button>
         </div>
       </section>

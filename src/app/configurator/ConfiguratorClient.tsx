@@ -6,7 +6,7 @@ import { site } from '@/content/site';
 
 type RequestType = CategorySlug | 'other';
 
-export function ConstructorClient({ initialType }: { initialType: string | undefined }) {
+export function ConfiguratorClient({ initialType }: { initialType: string | undefined }) {
   const normalizedInitial: RequestType = (categories.some((c) => c.slug === initialType) ? (initialType as CategorySlug) : 'other');
   const [type, setType] = useState<RequestType>(normalizedInitial);
   const [occasion, setOccasion] = useState('');
@@ -49,10 +49,10 @@ export function ConstructorClient({ initialType }: { initialType: string | undef
   }
 
   return (
-    <div className="constructor">
+    <div className="configurator">
       <div className="panel">
         <h1 className="section__title" style={{ marginTop: 0 }}>
-          Конструктор заявки
+          Конфигуратор заявки
         </h1>
         <p className="muted">
           Заполните поля — ниже появится текст заявки. Ничего не сохраняется на сервере.

@@ -18,7 +18,7 @@ export function Header() {
   const navItems: NavItem[] = useMemo(
     () => [
       ...categories.map((c) => ({ href: `/${c.slug}`, label: c.title })),
-      { href: '/constructor', label: 'Конструктор' }
+      { href: '/configurator', label: 'Конфигуратор' }
     ],
     []
   );
@@ -84,11 +84,11 @@ export function Header() {
           </details>
 
           <Link
-            href="/constructor"
-            className={`nav__link ${isActive('/constructor') ? 'nav__link--active' : ''}`}
-            aria-current={isActive('/constructor') ? 'page' : undefined}
+            href="/configurator"
+            className={`nav__link ${isActive('/configurator') ? 'nav__link--active' : ''}`}
+            aria-current={isActive('/configurator') ? 'page' : undefined}
           >
-            Конструктор
+            Конфигуратор
           </Link>
 
           <a className="nav__link nav__link--cta" href={site.socials.telegram} target="_blank" rel="noopener noreferrer">

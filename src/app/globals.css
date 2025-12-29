@@ -756,15 +756,15 @@ h3 {
   object-fit: cover;
 }
 
-/* -------- Forms / constructor -------- */
-.constructor {
+/* -------- Forms / configurator -------- */
+.configurator {
   display: grid;
   gap: 18px;
   grid-template-columns: 1fr;
 }
 
 @media (min-width: 980px) {
-  .constructor {
+  .configurator {
     grid-template-columns: 1fr 1fr;
   }
 }

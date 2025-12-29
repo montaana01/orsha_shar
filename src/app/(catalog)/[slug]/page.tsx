@@ -54,8 +54,8 @@ export default function CategoryPage({ params }: Props) {
                   Заказать в Telegram
                 </Button>
               ) : null}
-              <Button href="/constructor" variant="ghost">
-                Конструктор
+              <Button href="/configurator" variant="ghost">
+                Конфигуратор
               </Button>
             </div>
           </div>
@@ -86,11 +86,11 @@ export default function CategoryPage({ params }: Props) {
           <div>
             <h3 className="panel__title">Сформировать заявку</h3>
             <p className="muted">
-              Конструктор поможет быстро собрать детали и сформирует текст, который вы отправите в мессенджер.
+              Конфигуратор поможет быстро собрать детали и сформирует текст, который вы отправите в мессенджер.
             </p>
           </div>
-          <Button href={`/constructor?type=${category.slug}`} variant="primary">
-            Перейти в конструктор
+          <Button href={`/configurator?type=${category.slug}`} variant="primary">
+            Перейти в конфигуратор
           </Button>
         </div>
       </section>
