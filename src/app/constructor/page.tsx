@@ -10,7 +10,6 @@ export const runtime = 'nodejs';
 function ConstructorPageContent() {
   const searchParams = useSearchParams();
   const type = searchParams.get('type') ?? undefined;
-
   return (
     <section className="section">
       <div className="section__head">
