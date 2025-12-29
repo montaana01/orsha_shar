@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: '%s — ORSHA SHAR'
   },
   description:
-    'Гелиевые шары, фотозоны, украшения для торжеств в Орше. Бесплатная доставка по г. Орша.',
+    'Гелиевые шары, фотозоны, украшения для торжеств в Орше.',
   icons: {
     icon: '/assets/icon.webp',
     apple: '/assets/icon.webp'
