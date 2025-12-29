@@ -90,7 +90,7 @@ export default function HomePage() {
           </div>
           <div className="panel">
             <h3 className="panel__title">3. Доставим</h3>
-            <p className="muted">Бесплатно по Орше и Бабиничам. По району — платно.</p>
+            <p className="muted">В пределах Орши и Бабинич в зависимости от суммы заказа. По району — платно.</p>
           </div>
         </div>
       </section>
