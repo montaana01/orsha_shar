@@ -30,7 +30,7 @@ export default function HomePage() {
           <div className="hero__inner">
             <h1 className="hero__title">Гелиевые шары и фотозоны в Орше</h1>
             <p className="hero__subtitle">
-              Доставка по г. Орша — бесплатно. Заказ можно оформить в Instagram/Telegram.
+              Заказ можно оформить в Instagram/Telegram.
             </p>
             <div className="hero__actions">
               <a className="btn btn--primary" href={telHref(phone)}>
