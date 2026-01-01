@@ -20,13 +20,13 @@ export const categories: Category[] = [
     slug: 'photozony',
     title: 'Фотозоны',
     description: 'Наша команда реализует самые различные варианты фотозон.',
-    heroImage: '/gallery/photozony/img01.jpg'
+    heroImage: '/gallery/photozony/img01.webp'
   },
   {
     slug: 'fountains',
     title: 'Фонтаны из шаров',
     description: 'Мы предлагаем различные варианты фонтанов из шаров.',
-    heroImage: '/gallery/fountains/img01.jpg'
+    heroImage: '/gallery/fountains/img01.webp'
   },
   {
     slug: 'boxes',
@@ -39,19 +39,19 @@ export const categories: Category[] = [
     slug: 'bouquets',
     title: 'Букеты из шаров',
     description: 'Букет цветов — прекрасный подарок или дополнение к основному подарку.',
-    heroImage: '/gallery/bouquets/img01.jpg'
+    heroImage: '/gallery/bouquets/img01.webp'
   },
   {
     slug: 'figures',
     title: 'Фигуры из шаров',
     description: 'Наша команда изготовит фигуры из шаров любой сложности.',
-    heroImage: '/gallery/figures/img01.jpg'
+    heroImage: '/gallery/figures/img01.webp'
   },
   {
     slug: 'numerals',
     title: 'Цифры',
     description: 'Если именинник забыл сколько ему лет — можно оригинально напомнить!',
-    heroImage: '/gallery/numerals/img01.jpg'
+    heroImage: '/gallery/numerals/img01.webp'
   },
   {
     slug: 'tematicheskiye',
