@@ -7,14 +7,16 @@ import { listGalleryImages } from '@/lib/gallery';
 import { Button } from '@/components/Button';
 import { Gallery } from '@/components/Gallery';
 
-type Props = { params: { slug: string } };
+type Params = { slug: CategorySlug };
+type Props = { params: Promise<Params> };
 
 export function generateStaticParams(): Array<{ slug: CategorySlug }> {
   return categories.map((c) => ({ slug: c.slug }));
 }
 
-export function generateMetadata({ params }: Props): Metadata {
-  const category = categoryBySlug(params.slug);
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const category = categoryBySlug(slug);
   if (!category) return {};
 
   const url = `${site.url}/${category.slug}`;
@@ -32,8 +34,9 @@ export function generateMetadata({ params }: Props): Metadata {
   };
 }
 
-export default function CategoryPage({ params }: Props) {
-  const category = categoryBySlug(params.slug);
+export default async function CategoryPage({ params }: Props) {
+  const { slug } = await params;
+  const category = categoryBySlug(slug);
   if (!category) notFound();
 
   const images = listGalleryImages(category.slug);
