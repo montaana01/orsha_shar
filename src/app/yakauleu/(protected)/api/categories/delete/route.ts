@@ -1,8 +1,8 @@
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { NextResponse, type NextRequest } from 'next/server';
 import { execute, query } from '@/lib/db';
 import { requireAdminRequest, unauthorized } from '@/lib/admin-guard';
+import { archivePath } from '@/lib/files';
 
 export const runtime = 'nodejs';
 
@@ -24,9 +24,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(url, 303);
   }
 
-  const rows = await query<{ slug: string; hero_image: string }>('SELECT slug, hero_image FROM categories WHERE id = ? LIMIT 1', [
-    id
-  ]);
+  const rows = await query<{ slug: string }>(
+    'SELECT slug FROM categories WHERE id = ? AND is_deleted = 0 LIMIT 1',
+    [id]
+  );
   const category = rows[0];
   if (!category) {
     const url = new URL('/yakauleu', request.url);
@@ -35,37 +36,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(url, 303);
   }
 
-  const counts = await query<{ count: number }>('SELECT COUNT(*) as count FROM category_images WHERE category_id = ?', [id]);
-  if ((counts[0]?.count ?? 0) > 0) {
-    const url = new URL('/yakauleu', request.url);
-    if (tab) url.searchParams.set('tab', tab);
-    url.searchParams.set('error', 'category_has_images');
-    return NextResponse.redirect(url, 303);
-  }
+  await execute('UPDATE categories SET is_deleted = 1, visible = 0 WHERE id = ?', [id]);
+  await execute('UPDATE category_images SET is_deleted = 1, visible = 0 WHERE category_id = ?', [id]);
 
-  await execute('DELETE FROM categories WHERE id = ?', [id]);
-
-  const baseDir = path.resolve(process.cwd(), 'public', 'gallery', category.slug);
-  if (category.hero_image && category.hero_image.startsWith(`/gallery/${category.slug}/`)) {
-    const heroPath = path.resolve(process.cwd(), 'public', category.hero_image.slice(1));
-    if (heroPath.startsWith(`${baseDir}${path.sep}`)) {
-      try {
-        await fs.unlink(heroPath);
-      } catch {
-        // ignore missing file
-      }
-    }
-  }
-
-  try {
-    const entries = await fs.readdir(baseDir);
-    const remaining = entries.filter((name) => name !== '.DS_Store');
-    if (remaining.length === 0) {
-      await fs.rmdir(baseDir);
-    }
-  } catch {
-    // ignore missing dir
-  }
+  const publicDir = path.resolve(process.cwd(), 'public');
+  await archivePath(publicDir, path.join('gallery', category.slug));
 
   const url = new URL('/yakauleu', request.url);
   if (tab) url.searchParams.set('tab', tab);

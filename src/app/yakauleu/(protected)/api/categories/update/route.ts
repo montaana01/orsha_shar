@@ -25,9 +25,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(new URL('/yakauleu?error=category', request.url), 303);
   }
 
-  const existing = await query<{ slug: string; hero_image: string }>('SELECT slug, hero_image FROM categories WHERE id = ? LIMIT 1', [
-    id
-  ]);
+  const existing = await query<{ slug: string; hero_image: string }>(
+    'SELECT slug, hero_image FROM categories WHERE id = ? AND is_deleted = 0 LIMIT 1',
+    [id]
+  );
   const prevSlug = existing[0]?.slug ?? '';
   let heroImage = existing[0]?.hero_image ?? '';
   if (!prevSlug) {

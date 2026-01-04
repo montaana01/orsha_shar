@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { execute } from '@/lib/db';
 import { requireAdminRequest, unauthorized } from '@/lib/admin-guard';
-import { parseNonNegativeInt, parsePositiveInt, requireText } from '@/lib/validation';
+import { parsePositiveInt } from '@/lib/validation';
 
 export const runtime = 'nodejs';
+
+const VALID_TABS = new Set(['categories', 'fonts', 'colors', 'exports']);
 
 export async function POST(request: NextRequest) {
   const admin = await requireAdminRequest(request);
@@ -11,20 +13,17 @@ export async function POST(request: NextRequest) {
 
   const form = await request.formData();
   const tabRaw = String(form.get('tab') ?? '');
-  const tab = ['categories', 'fonts', 'colors', 'exports'].includes(tabRaw) ? tabRaw : '';
+  const tab = VALID_TABS.has(tabRaw) ? tabRaw : '';
   const id = parsePositiveInt(form.get('id'));
-  const name = requireText(String(form.get('name') ?? ''), 190);
-  const visible = form.get('visible') ? 1 : 0;
-  const position = parseNonNegativeInt(form.get('position'), 9999);
 
-  if (!id || !name) {
+  if (!id) {
     const url = new URL('/yakauleu', request.url);
     if (tab) url.searchParams.set('tab', tab);
-    url.searchParams.set('error', 'fonts');
+    url.searchParams.set('error', 'colors');
     return NextResponse.redirect(url, 303);
   }
 
-  await execute('UPDATE fonts SET name = ?, visible = ?, position = ? WHERE id = ? AND is_deleted = 0', [name, visible, position, id]);
+  await execute('UPDATE colors SET is_deleted = 1, visible = 0 WHERE id = ? AND is_deleted = 0', [id]);
 
   const url = new URL('/yakauleu', request.url);
   if (tab) url.searchParams.set('tab', tab);

@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(url, 303);
   }
 
-  await execute('UPDATE colors SET name = ?, value = ?, visible = ?, position = ? WHERE id = ?', [
+  await execute('UPDATE colors SET name = ?, value = ?, visible = ?, position = ? WHERE id = ? AND is_deleted = 0', [
     name,
     value,
     visible,

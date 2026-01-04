@@ -65,7 +65,7 @@ export async function getCategories(opts: { includeHidden?: boolean } = {}): Pro
   }>(
     `SELECT id, slug, title, description, hero_image, visible, position
      FROM categories
-     ${includeHidden ? '' : 'WHERE visible = 1'}
+     WHERE is_deleted = 0 ${includeHidden ? '' : 'AND visible = 1'}
      ORDER BY position ASC, id ASC`
   );
 
@@ -92,7 +92,7 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
   }>(
     `SELECT id, slug, title, description, hero_image, visible, position
      FROM categories
-     WHERE slug = ?
+     WHERE slug = ? AND is_deleted = 0
      LIMIT 1`,
     [slug]
   );
@@ -123,7 +123,7 @@ export async function getCategoryImages(categoryId: number, opts: { includeHidde
     `SELECT i.id, i.category_id, i.file_name, i.visible, i.position, c.slug
      FROM category_images i
      JOIN categories c ON c.id = i.category_id
-     WHERE i.category_id = ?
+     WHERE i.category_id = ? AND i.is_deleted = 0 AND c.is_deleted = 0
      ${includeHidden ? '' : 'AND i.visible = 1'}
      ORDER BY i.position ASC, i.id ASC`,
     [categoryId]
@@ -153,7 +153,7 @@ export async function getCategoryImagesBySlug(slug: string, opts: { includeHidde
     `SELECT i.id, i.category_id, i.file_name, i.visible, i.position, c.slug
      FROM category_images i
      JOIN categories c ON c.id = i.category_id
-     WHERE c.slug = ?
+     WHERE c.slug = ? AND i.is_deleted = 0 AND c.is_deleted = 0
      ${includeHidden ? '' : 'AND i.visible = 1'}
      ORDER BY i.position ASC, i.id ASC`,
     [slug]
@@ -181,7 +181,7 @@ export async function getFonts(opts: { includeHidden?: boolean } = {}): Promise<
   }>(
     `SELECT id, name, file_name, visible, position
      FROM fonts
-     ${includeHidden ? '' : 'WHERE visible = 1'}
+     WHERE is_deleted = 0 ${includeHidden ? '' : 'AND visible = 1'}
      ORDER BY position ASC, id ASC`
   );
 
@@ -206,7 +206,7 @@ export async function getColors(opts: { includeHidden?: boolean } = {}): Promise
   }>(
     `SELECT id, name, value, visible, position
      FROM colors
-     ${includeHidden ? '' : 'WHERE visible = 1'}
+     WHERE is_deleted = 0 ${includeHidden ? '' : 'AND visible = 1'}
      ORDER BY position ASC, id ASC`
   );
 
@@ -236,6 +236,7 @@ export async function getExports(): Promise<ExportRecord[]> {
   }>(
     `SELECT id, session_id, export_id, project_hash, product, size_cm, font_id, font_name, color, svg_path, dxf_path, created_at
      FROM inscription_exports
+     WHERE is_deleted = 0
      ORDER BY created_at DESC, id DESC`
   );
 

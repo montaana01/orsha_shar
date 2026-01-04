@@ -50,7 +50,7 @@ export function Footer() {
           </ul>
 
           <p className="muted">
-            Сайт не хранит персональные данные — только технические cookies.
+            Минимальные данные: имя/контакт сохраняются в браузере, cookies — для работы сайта.
           </p>
         </div>
 
@@ -64,7 +64,7 @@ export function Footer() {
               <Link href="/configurator">Конфигуратор</Link>
             </li>
             <li>
-              <Link href="/privacy">Политика cookies</Link>
+              <Link href="/privacy">Политика конфиденциальности</Link>
             </li>
           </ul>
         </div>

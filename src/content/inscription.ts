@@ -43,7 +43,7 @@ export const PAYLOAD_LIMIT_G: Record<ProductType, Record<number, number>> = {
 };
 
 export const MATERIALS = [
-  { id: 'vinyl', label: 'Винил (наклейка)', gPerCm2: 0.003 },
+  { id: 'vinyl', label: 'Винил (наклейка)', gPerCm2: 0.011 },
 ] as const;
 
 export const COLOR_PRESETS = [

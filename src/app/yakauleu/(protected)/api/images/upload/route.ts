@@ -22,7 +22,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(new URL('/yakauleu?error=images', request.url), 303);
   }
 
-  const categoryRows = await query<{ slug: string }>('SELECT slug FROM categories WHERE id = ? LIMIT 1', [categoryId]);
+  const categoryRows = await query<{ slug: string }>(
+    'SELECT slug FROM categories WHERE id = ? AND is_deleted = 0 LIMIT 1',
+    [categoryId]
+  );
   const slug = normalizeSlug(categoryRows[0]?.slug ?? '');
   if (!slug) {
     return NextResponse.redirect(new URL('/yakauleu?error=images', request.url), 303);

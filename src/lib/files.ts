@@ -31,6 +31,20 @@ export async function writeFileSafe(filePath: string, data: ArrayBuffer | Buffer
   await fs.writeFile(filePath, bytes);
 }
 
+export async function archivePath(baseDir: string, relativePath: string): Promise<boolean> {
+  const abs = path.resolve(baseDir, relativePath);
+  const rel = path.relative(baseDir, abs);
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return false;
+  const dest = path.resolve(baseDir, 'deleted', rel);
+  await ensureDir(path.dirname(dest));
+  try {
+    await fs.rename(abs, dest);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function isAllowedExtension(name: string, exts: string[]): boolean {
   const ext = path.extname(name).toLowerCase();
   return exts.includes(ext);

@@ -22,7 +22,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'Invalid export id' }, { status: 400 });
   }
 
-  const rows = await query<ExportRow>('SELECT id, svg_path, dxf_path FROM inscription_exports WHERE id = ? LIMIT 1', [exportId]);
+  const rows = await query<ExportRow>(
+    'SELECT id, svg_path, dxf_path FROM inscription_exports WHERE id = ? AND is_deleted = 0 LIMIT 1',
+    [exportId]
+  );
   const row = rows[0];
   if (!row) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });

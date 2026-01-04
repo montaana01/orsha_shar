@@ -1,3 +1,4 @@
+import { ColorPickerField } from '@/components/ColorPickerField';
 import { getCategories, getCategoryImages, getColors, getExports, getFonts } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
@@ -177,20 +178,10 @@ export default async function AdminPage({ searchParams }: Props) {
                       <button className="btn btn--secondary" type="submit">
                         Сохранить категорию
                       </button>
-                      <button
-                        className="btn btn--ghost"
-                        type="submit"
-                        formAction="/yakauleu/api/categories/delete"
-                        disabled={images.length > 0}
-                      >
+                      <button className="btn btn--ghost" type="submit" formAction="/yakauleu/api/categories/delete">
                         Удалить категорию
                       </button>
                     </div>
-                    {images.length > 0 ? (
-                      <div className="muted" style={{ fontSize: 12 }}>
-                        Удаление доступно, когда нет изображений.
-                      </div>
-                    ) : null}
                   </form>
 
                   <form
@@ -326,9 +317,14 @@ export default async function AdminPage({ searchParams }: Props) {
                     <input type="checkbox" name="visible" defaultChecked={font.visible} />
                     <span>Показывать</span>
                   </label>
-                  <button className="btn btn--secondary" type="submit">
-                    Сохранить
-                  </button>
+                  <div className="hero__actions" style={{ justifyContent: 'flex-start' }}>
+                    <button className="btn btn--secondary" type="submit">
+                      Сохранить
+                    </button>
+                    <button className="btn btn--ghost" type="submit" formAction="/yakauleu/api/fonts/delete">
+                      Удалить
+                    </button>
+                  </div>
                 </form>
               ))}
             </div>
@@ -347,7 +343,7 @@ export default async function AdminPage({ searchParams }: Props) {
                 </label>
                 <label className="field">
                   <span className="field__label">Цвет</span>
-                  <input className="field__control" name="value" type="color" defaultValue="#ffffff" required />
+                  <ColorPickerField name="value" defaultValue="#ffffff" />
                 </label>
               </div>
               <div className="grid inscription__grid">
@@ -377,7 +373,7 @@ export default async function AdminPage({ searchParams }: Props) {
                     </label>
                     <label className="field">
                       <span className="field__label">Цвет</span>
-                      <input className="field__control" name="value" type="color" defaultValue={color.value} required />
+                      <ColorPickerField name="value" defaultValue={color.value} />
                     </label>
                   </div>
                   <div className="grid inscription__grid">
@@ -390,9 +386,14 @@ export default async function AdminPage({ searchParams }: Props) {
                       <span>Показывать</span>
                     </label>
                   </div>
-                  <button className="btn btn--secondary" type="submit">
-                    Сохранить
-                  </button>
+                  <div className="hero__actions" style={{ justifyContent: 'flex-start' }}>
+                    <button className="btn btn--secondary" type="submit">
+                      Сохранить
+                    </button>
+                    <button className="btn btn--ghost" type="submit" formAction="/yakauleu/api/colors/delete">
+                      Удалить
+                    </button>
+                  </div>
                 </form>
               ))}
             </div>
@@ -418,14 +419,21 @@ export default async function AdminPage({ searchParams }: Props) {
                           Шрифт: {exp.fontName} • Цвет: {exp.color}
                         </div>
                       </div>
-                      <div className="hero__actions" style={{ flexWrap: 'wrap' }}>
-                        <a className="btn btn--secondary" href={`/yakauleu/exports/${exp.id}?type=svg`}>
-                          SVG
-                        </a>
-                        <a className="btn btn--secondary" href={`/yakauleu/exports/${exp.id}?type=dxf`}>
-                          DXF
-                        </a>
-                      </div>
+                        <div className="hero__actions" style={{ flexWrap: 'wrap' }}>
+                          <a className="btn btn--secondary" href={`/yakauleu/exports/${exp.id}?type=svg`}>
+                            SVG
+                          </a>
+                          <a className="btn btn--secondary" href={`/yakauleu/exports/${exp.id}?type=dxf`}>
+                            DXF
+                          </a>
+                          <form method="post" action="/yakauleu/api/exports/delete">
+                            <input type="hidden" name="id" value={exp.id} />
+                            <input type="hidden" name="tab" value="exports" />
+                            <button className="btn btn--ghost" type="submit">
+                              Удалить
+                            </button>
+                          </form>
+                        </div>
                     </div>
                     <div className="muted" style={{ fontSize: 12 }}>
                       {new Date(exp.createdAt).toLocaleString('ru-RU')}

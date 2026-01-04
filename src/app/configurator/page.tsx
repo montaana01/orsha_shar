@@ -1,15 +1,15 @@
-'use client';
-
-import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { ConfiguratorClient } from './ConfiguratorClient';
+import { getPublicCategories } from '@/lib/public-data';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-function ConfiguratorPageContent() {
-  const searchParams = useSearchParams();
-  const type = searchParams.get('type') ?? undefined;
+type PageProps = { searchParams?: Promise<{ type?: string }> };
+
+export default async function ConfiguratorPage({ searchParams }: PageProps) {
+  const params = (await searchParams) ?? {};
+  const type = params.type ?? undefined;
+  const categories = await getPublicCategories();
   return (
     <section className="section">
       <div className="section__head">
@@ -19,15 +19,7 @@ function ConfiguratorPageContent() {
         </p>
       </div>
 
-      <ConfiguratorClient initialType={type} />
+      <ConfiguratorClient initialType={type} categories={categories} />
     </section>
-  );
-}
-
-export default function ConfiguratorPage() {
-  return (
-    <Suspense fallback={null}>
-      <ConfiguratorPageContent />
-    </Suspense>
   );
 }
