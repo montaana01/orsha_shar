@@ -34,6 +34,7 @@ body {
 
 html {
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -86,7 +87,7 @@ a:hover {
   width: 100%;
   max-width: var(--container);
   margin: 0 auto;
-  padding: 28px 20px 64px;
+  padding: 28px 20px;
   flex: 1;
 }
 
@@ -142,19 +143,14 @@ h3 {
 }
 
 .header__logoImg {
-  height: 44px;
+  height: 60px;
   width: auto;
 }
 
 .header__mark {
-  width: 44px;
-  height: 44px;
-  /* border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid rgba(17, 18, 19, 0.08);
-  background: rgb(241 192 198 / 74%);
-  box-shadow: var(--shadow-sm);
-  flex: 0 0 auto; */
+  width: 55px;
+  height: 55px;
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
 }
@@ -168,9 +164,9 @@ h3 {
 
 .header__brandName {
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  font-size: 15px;
+  font-size: 18px;
   color: var(--text);
 }
 
@@ -499,15 +495,29 @@ h3 {
   border-color: rgba(0, 0, 0, 0.06);
 }
 
+.btn--primary:hover {
+  background: var(--brand-strong);
+}
+
 .btn--secondary {
   background: var(--surface);
   border-color: var(--border);
+}
+
+.btn--secondary:hover {
+  background: rgba(241, 192, 198, 0.22);
+  border-color: rgba(17, 18, 19, 0.18);
 }
 
 .btn--ghost {
   background: transparent;
   border-color: transparent;
   color: var(--muted);
+}
+
+.btn--ghost:hover {
+  color: var(--text);
+  background: rgba(241, 192, 198, 0.18);
 }
 
 /* -------- Sections / panels -------- */
@@ -559,13 +569,146 @@ h3 {
   font-size: 18px;
 }
 
-.panel--cta {
+.panel--service {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
   background: linear-gradient(135deg, rgba(241, 192, 198, 0.35), rgba(255, 255, 255, 0.20));
+}
+
+/* -------- Fallback catalog -------- */
+.fallbackGrid {
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 900px) {
+  .fallbackGrid {
+    grid-template-columns: 0.6fr 1.4fr;
+  }
+}
+
+.featureList,
+.stepsList {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+}
+
+.featureList li,
+.stepsList li {
+  line-height: 1.5;
+}
+
+.carousel {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 14px 2px 4px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.carousel__item {
+  flex: 0 0 70%;
+  scroll-snap-align: start;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.carousel__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (min-width: 700px) {
+  .carousel__item {
+    flex-basis: 38%;
+  }
+}
+
+@media (min-width: 1040px) {
+  .carousel__item {
+    flex-basis: 28%;
+  }
+}
+
+/* -------- Admin -------- */
+.adminLayout {
+  display: grid;
+  gap: 16px;
+}
+
+.adminTabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.adminTab {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 14px;
+  text-decoration: none;
+  transition: all 120ms ease;
+}
+
+.adminTab:hover {
+  color: var(--text);
+  border-color: rgba(17, 18, 19, 0.25);
+}
+
+.adminTab--active {
+  color: var(--text);
+  border-color: rgba(17, 18, 19, 0.2);
+  background: linear-gradient(135deg, rgba(241, 192, 198, 0.35), rgba(255, 255, 255, 0.35));
+  box-shadow: var(--shadow-sm);
+}
+
+.adminContent {
+  width: 100%;
+}
+
+.adminHeroPreview {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.adminHeroPreview img {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  width: 160px;
+  height: auto;
+  object-fit: cover;
+}
+
+@media (min-width: 980px) {
+  .adminLayout {
+    grid-template-columns: 220px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .adminTabs {
+    flex-direction: column;
+    position: sticky;
+    top: 96px;
+  }
+
+  .adminTab {
+    border-radius: 14px;
+  }
 }
 
 /* -------- Hero -------- */
@@ -824,6 +967,20 @@ h3 {
 
 .field--full {
   grid-column: 1 / -1;
+}
+
+.notice {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  background: rgba(17, 18, 19, 0.02);
+}
+
+.notice--warn {
+  border-color: rgba(177, 13, 13, 0.22);
+  background: rgba(177, 13, 13, 0.06);
 }
 
 .pre {

@@ -13,11 +13,20 @@ import {
   PRODUCT_SIZES_CM,
   type ProductType
 } from '@/content/inscription';
+import type { ColorPreset, FontPreset } from '@/lib/data';
 import { fnv1a } from '@/lib/hash';
 import { getShape, pointInPolygon, type Point } from './shapes';
 import { Button } from '@/components/Button';
 
 const CANVAS_PX = 720;
+const BOX_SIDES = [
+  { id: 'front', label: 'Передняя' },
+  { id: 'right', label: 'Правая' },
+  { id: 'back', label: 'Задняя' },
+  { id: 'left', label: 'Левая' }
+] as const;
+
+type BoxSide = (typeof BOX_SIDES)[number]['id'];
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -73,7 +82,6 @@ type LoadedFont = {
   name: string;
   fileName: string;
   arrayBuffer: ArrayBuffer;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   font: any;
 };
 
@@ -83,6 +91,17 @@ function sanitizeText(input: string) {
   const joined = lines.join('\n').slice(0, MAX_CHARS);
   return joined;
 }
+
+type BoxSideState = {
+  text: string;
+  fontPresetId: string;
+  fontSizePx: number;
+  letterSpacing: number;
+  color: string;
+  materialId: (typeof MATERIALS)[number]['id'];
+  coverage: number;
+  pos: { x: number; y: number };
+};
 
 type EditorState = {
   product: ProductType;
@@ -95,26 +114,123 @@ type EditorState = {
   materialId: (typeof MATERIALS)[number]['id'];
   coverage: number;
   pos: { x: number; y: number };
+  boxSide?: BoxSide;
+  boxSides?: Record<BoxSide, BoxSideState>;
 };
 
-export function InscriptionClient() {
-  const [product, setProduct] = useState<ProductType>('balloon');
-  const [sizeCm, setSizeCm] = useState<number>(PRODUCT_SIZES_CM.balloon[0]);
+type FontOption = {
+  id: string;
+  label: string;
+  css: string;
+  fileUrl?: string;
+  fileName?: string;
+  source: 'db' | 'fallback';
+};
+
+export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colors: ColorPreset[] }) {
+  const fontOptions: FontOption[] = useMemo(() => {
+    const fallbackFonts = FONT_PRESETS.map((font) => ({
+      id: font.id,
+      label: font.label,
+      css: font.css,
+      fileUrl: font.fileUrl,
+      fileName: font.fileName,
+      source: 'fallback'
+    }));
+    const dbFonts = fonts.map((font) => ({
+      id: String(font.id),
+      label: font.name,
+      css: `'${font.name.replace(/'/g, "\\'")}', system-ui, -apple-system, Segoe UI, Roboto, Arial`,
+      fileUrl: font.fileUrl,
+      fileName: font.fileName,
+      source: 'db'
+    }));
+
+    const merged = [...fallbackFonts, ...dbFonts];
+    const seen = new Set<string>();
+    return merged.filter((font) => {
+      const key = (font.fileName || font.label).toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [fonts]);
+
+  const colorOptions = useMemo(() => {
+    if (colors.length) {
+      return colors.map((color) => ({ id: color.id, value: color.value, label: color.name }));
+    }
+    return COLOR_PRESETS;
+  }, [colors]);
+
+  const [product, setProduct] = useState<ProductType>('foilStar');
+  const [sizeCm, setSizeCm] = useState<number>(PRODUCT_SIZES_CM.foilStar[0]);
   const [text, setText] = useState<string>('С ДНЁМ\nРОЖДЕНИЯ');
-  const [fontPresetId, setFontPresetId] = useState<string>(FONT_PRESETS[0].id);
+  const [fontPresetId, setFontPresetId] = useState<string>(fontOptions[0]?.id ?? 'uploaded');
   const [fontSizePx, setFontSizePx] = useState<number>(64);
   const [letterSpacing, setLetterSpacing] = useState<number>(0);
-  const [color, setColor] = useState<string>('#FFFFFF');
+  const [color, setColor] = useState<string>(colorOptions[0]?.value ?? '#FFFFFF');
   const [materialId, setMaterialId] = useState<(typeof MATERIALS)[number]['id']>(MATERIALS[0].id);
   const [coverage, setCoverage] = useState<number>(DEFAULT_COVERAGE_FACTOR);
 
   const [pos, setPos] = useState<{ x: number; y: number }>({ x: CANVAS_PX / 2, y: CANVAS_PX / 2 });
+  const [boxSide, setBoxSide] = useState<BoxSide>('front');
+  const [boxSideStates, setBoxSideStates] = useState<Record<BoxSide, BoxSideState>>(() => {
+    const base: BoxSideState = {
+      text,
+      fontPresetId,
+      fontSizePx,
+      letterSpacing,
+      color,
+      materialId,
+      coverage,
+      pos: { ...pos }
+    };
+    return {
+      front: { ...base },
+      right: { ...base },
+      back: { ...base },
+      left: { ...base }
+    };
+  });
+
+  const activeBoxSideState = useMemo<BoxSideState>(() => {
+    return {
+      text,
+      fontPresetId,
+      fontSizePx,
+      letterSpacing,
+      color,
+      materialId,
+      coverage,
+      pos: { ...pos }
+    };
+  }, [color, coverage, fontPresetId, fontSizePx, letterSpacing, materialId, pos, text]);
+
+  const boxSidesSnapshot = useMemo(() => {
+    if (product !== 'box') return undefined;
+    return {
+      ...boxSideStates,
+      [boxSide]: activeBoxSideState
+    };
+  }, [activeBoxSideState, boxSide, boxSideStates, product]);
 
   const [showSafeZone, setShowSafeZone] = useState<boolean>(true);
   const [loadedFont, setLoadedFont] = useState<LoadedFont | null>(null);
+  const [presetFont, setPresetFont] = useState<LoadedFont | null>(null);
+  const [cyrillicStatus, setCyrillicStatus] = useState<{
+    unsupported: string[];
+    mode: 'none' | 'font' | 'browser' | 'unknown';
+  }>({ unsupported: [], mode: 'none' });
+  const [exportSessionId, setExportSessionId] = useState<string | null>(null);
 
   const textRef = useRef<SVGTextElement | null>(null);
-  const [bboxSize, setBboxSize] = useState<{ w: number; h: number }>({ w: 260, h: 90 });
+  const [bbox, setBbox] = useState<{ w: number; h: number; offsetX: number; offsetY: number }>({
+    w: 260,
+    h: 90,
+    offsetX: -130,
+    offsetY: -45
+  });
 
   const shape = useMemo(() => getShape(product, CANVAS_PX), [product]);
 
@@ -123,47 +239,220 @@ export function InscriptionClient() {
 
   const material = useMemo(() => MATERIALS.find((m) => m.id === materialId) ?? MATERIALS[0], [materialId]);
 
+  const selectedFont = useMemo(() => fontOptions.find((font) => font.id === fontPresetId) ?? fontOptions[0], [fontOptions, fontPresetId]);
+
   const fontCss = useMemo(() => {
-    if (fontPresetId === 'uploaded' && loadedFont) return `'${loadedFont.name}', system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    const preset = FONT_PRESETS.find((f) => f.id === fontPresetId) ?? FONT_PRESETS[0];
-    return preset.css;
-  }, [fontPresetId, loadedFont]);
+    if (fontPresetId === 'uploaded' && loadedFont) {
+      const safeName = loadedFont.name.replace(/'/g, "\\'");
+      return `'${safeName}', system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    }
+    return selectedFont?.css ?? 'system-ui, -apple-system, Segoe UI, Roboto, Arial';
+  }, [fontPresetId, loadedFont, selectedFont]);
+
+  useEffect(() => {
+    if (!fontOptions.length) return;
+    if (fontPresetId === 'uploaded') return;
+    if (!fontOptions.find((font) => font.id === fontPresetId)) {
+      setFontPresetId(fontOptions[0]?.id ?? 'uploaded');
+    }
+  }, [fontOptions, fontPresetId]);
+
+  useEffect(() => {
+    if (!colorOptions.length) return;
+    if (!colorOptions.find((c) => c.value.toLowerCase() === color.toLowerCase())) {
+      setColor(colorOptions[0]?.value ?? '#FFFFFF');
+    }
+  }, [color, colorOptions]);
+
+  const cyrillicChars = useMemo(() => {
+    const chars = new Set<string>();
+    for (const ch of text) {
+      if (/[\u0400-\u04FF]/.test(ch)) chars.add(ch);
+    }
+    return Array.from(chars);
+  }, [text]);
+
+  const cyrillicUnsupportedPreview = useMemo(() => {
+    if (!cyrillicStatus.unsupported.length) return '';
+    const preview = cyrillicStatus.unsupported.slice(0, 12).join(' ');
+    return cyrillicStatus.unsupported.length > 12 ? `${preview}…` : preview;
+  }, [cyrillicStatus.unsupported]);
+
+  const [isCoarsePointer, setIsCoarsePointer] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(pointer: coarse)');
+    const update = () => setIsCoarsePointer(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const key = 'inscription_session';
+    let id = window.localStorage.getItem(key);
+    if (!id) {
+      id = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `sess-${Math.random().toString(36).slice(2, 10)}`;
+      window.localStorage.setItem(key, id);
+    }
+    setExportSessionId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!loadedFont) return;
+    const safeName = loadedFont.name.replace(/'/g, "\\'");
+    const isOtf = loadedFont.fileName.toLowerCase().endsWith('.otf');
+    const mime = isOtf ? 'font/otf' : 'font/ttf';
+    const fmt = isOtf ? 'opentype' : 'truetype';
+    const blob = new Blob([loadedFont.arrayBuffer], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const style = document.createElement('style');
+    style.textContent = `@font-face { font-family: '${safeName}'; src: url('${url}') format('${fmt}'); font-display: swap; }`;
+    document.head.appendChild(style);
+    return () => {
+      style.remove();
+      URL.revokeObjectURL(url);
+    };
+  }, [loadedFont]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const fileUrl = selectedFont?.fileUrl;
+    if (!fileUrl || fontPresetId === 'uploaded') return;
+    const safeName = selectedFont.label.replace(/'/g, "\\'");
+    const styleId = `font-face-${selectedFont.id}`;
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `@font-face { font-family: '${safeName}'; src: url('${fileUrl}'); font-display: swap; }`;
+      document.head.appendChild(style);
+    }
+  }, [fontPresetId, selectedFont]);
+
+  useEffect(() => {
+    const fileUrl = selectedFont?.fileUrl;
+    if (!fileUrl || fontPresetId === 'uploaded') {
+      setPresetFont(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(fileUrl);
+        if (!res.ok) throw new Error('Failed to fetch font');
+        const buf = await res.arrayBuffer();
+        const opentype = (await import('opentype.js')).default;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const font: any = opentype.parse(buf);
+        if (cancelled) return;
+        setPresetFont({
+          name: selectedFont.label,
+          fileName: selectedFont.fileName ?? selectedFont.label,
+          arrayBuffer: buf,
+          font
+        });
+      } catch {
+        if (!cancelled) setPresetFont(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fontPresetId, selectedFont]);
+
+  useEffect(() => {
+    if (!cyrillicChars.length) {
+      setCyrillicStatus({ unsupported: [], mode: 'none' });
+      return;
+    }
+
+    if (fontPresetId === 'uploaded' && loadedFont) {
+      const unsupported = cyrillicChars.filter((ch) => {
+        const glyph = loadedFont.font?.charToGlyph?.(ch);
+        return !glyph || glyph.index === 0;
+      });
+      setCyrillicStatus({ unsupported, mode: 'font' });
+      return;
+    }
+
+    if (fontPresetId !== 'uploaded' && presetFont) {
+      const unsupported = cyrillicChars.filter((ch) => {
+        const glyph = presetFont.font?.charToGlyph?.(ch);
+        return !glyph || glyph.index === 0;
+      });
+      setCyrillicStatus({ unsupported, mode: 'font' });
+      return;
+    }
+
+    if (typeof document === 'undefined' || !document.fonts?.check) {
+      setCyrillicStatus({ unsupported: [], mode: 'unknown' });
+      return;
+    }
+
+    const unsupported = cyrillicChars.filter((ch) => !document.fonts.check(`${fontSizePx}px ${fontCss}`, ch));
+    setCyrillicStatus({ unsupported, mode: 'browser' });
+  }, [cyrillicChars, fontCss, fontPresetId, fontSizePx, loadedFont, presetFont]);
 
   // Measure actual bbox (used for geometry and physics)
   useEffect(() => {
     if (!textRef.current) return;
     const b = textRef.current.getBBox();
-    setBboxSize({ w: Math.max(1, b.width), h: Math.max(1, b.height) });
+    const w = Math.max(1, b.width);
+    const h = Math.max(1, b.height);
+    const offsetX = b.x - pos.x;
+    const offsetY = b.y - pos.y;
+    setBbox((prev) => {
+      if (prev.w === w && prev.h === h && prev.offsetX === offsetX && prev.offsetY === offsetY) return prev;
+      return { w, h, offsetX, offsetY };
+    });
   }, [text, fontCss, fontSizePx, letterSpacing, pos.x, pos.y]);
 
-  const widthCm = bboxSize.w / pxPerCm;
-  const heightCm = bboxSize.h / pxPerCm;
+  const widthCm = bbox.w / pxPerCm;
+  const heightCm = bbox.h / pxPerCm;
   const areaCm2 = Math.max(0, widthCm * heightCm * coverage);
   const weightG = areaCm2 * material.gPerCm2;
 
   const payloadLimit = PAYLOAD_LIMIT_G[product][sizeCm] ?? 1.0;
-  const payloadOk = weightG <= payloadLimit;
+  const hasPayloadLimit = Number.isFinite(payloadLimit);
+  const payloadOk = !hasPayloadLimit || weightG <= payloadLimit;
 
   const corners = useMemo((): Point[] => {
-    const halfW = bboxSize.w / 2;
-    const halfH = bboxSize.h / 2;
+    const x0 = pos.x + bbox.offsetX;
+    const y0 = pos.y + bbox.offsetY;
     return [
-      { x: pos.x - halfW, y: pos.y - halfH },
-      { x: pos.x + halfW, y: pos.y - halfH },
-      { x: pos.x + halfW, y: pos.y + halfH },
-      { x: pos.x - halfW, y: pos.y + halfH }
+      { x: x0, y: y0 },
+      { x: x0 + bbox.w, y: y0 },
+      { x: x0 + bbox.w, y: y0 + bbox.h },
+      { x: x0, y: y0 + bbox.h }
     ];
-  }, [bboxSize.w, bboxSize.h, pos.x, pos.y]);
+  }, [bbox.h, bbox.offsetX, bbox.offsetY, bbox.w, pos.x, pos.y]);
+
+  const dragTarget = useMemo(() => {
+    const pad = isCoarsePointer ? 24 : 10;
+    const minSize = isCoarsePointer ? 80 : 44;
+    const rawW = bbox.w + pad * 2;
+    const rawH = bbox.h + pad * 2;
+    const w = Math.max(rawW, minSize);
+    const h = Math.max(rawH, minSize);
+    return {
+      w,
+      h,
+      offsetX: bbox.offsetX - pad - (w - rawW) / 2,
+      offsetY: bbox.offsetY - pad - (h - rawH) / 2
+    };
+  }, [bbox.h, bbox.offsetX, bbox.offsetY, bbox.w, isCoarsePointer]);
 
   const isInsideSafe = useCallback(
     (centerX: number, centerY: number) => {
-      const halfW = bboxSize.w / 2;
-      const halfH = bboxSize.h / 2;
+      const x0 = centerX + bbox.offsetX;
+      const y0 = centerY + bbox.offsetY;
       const pts: Point[] = [
-        { x: centerX - halfW, y: centerY - halfH },
-        { x: centerX + halfW, y: centerY - halfH },
-        { x: centerX + halfW, y: centerY + halfH },
-        { x: centerX - halfW, y: centerY + halfH }
+        { x: x0, y: y0 },
+        { x: x0 + bbox.w, y: y0 },
+        { x: x0 + bbox.w, y: y0 + bbox.h },
+        { x: x0, y: y0 + bbox.h }
       ];
 
       if (shape.kind === 'circle') {
@@ -173,7 +462,7 @@ export function InscriptionClient() {
 
       return pts.every((p) => pointInPolygon(shape.safePoints, p));
     },
-    [bboxSize.h, bboxSize.w, shape]
+    [bbox.h, bbox.offsetX, bbox.offsetY, bbox.w, shape]
   );
 
   const insideNow = useMemo(() => isInsideSafe(pos.x, pos.y), [isInsideSafe, pos.x, pos.y]);
@@ -214,7 +503,7 @@ export function InscriptionClient() {
   // Dragging
   const drag = useRef<{ active: boolean; dx: number; dy: number }>({ active: false, dx: 0, dy: 0 });
 
-  const pointerToSvg = (evt: React.PointerEvent<SVGTextElement>) => {
+  const pointerToSvg = (evt: React.PointerEvent<SVGGraphicsElement>) => {
     const svg = evt.currentTarget.ownerSVGElement;
     if (!svg) return null;
     const pt = svg.createSVGPoint();
@@ -225,7 +514,7 @@ export function InscriptionClient() {
     return pt.matrixTransform(inv);
   };
 
-  const onPointerDown = (evt: React.PointerEvent<SVGTextElement>) => {
+  const onPointerDown = (evt: React.PointerEvent<SVGGraphicsElement>) => {
     const p = pointerToSvg(evt);
     if (!p) return;
     drag.current.active = true;
@@ -234,7 +523,7 @@ export function InscriptionClient() {
     evt.currentTarget.setPointerCapture(evt.pointerId);
   };
 
-  const onPointerMove = (evt: React.PointerEvent<SVGTextElement>) => {
+  const onPointerMove = (evt: React.PointerEvent<SVGGraphicsElement>) => {
     if (!drag.current.active) return;
     const p = pointerToSvg(evt);
     if (!p) return;
@@ -246,10 +535,14 @@ export function InscriptionClient() {
       x: clamp(cand.x, 24, CANVAS_PX - 24),
       y: clamp(cand.y, 24, CANVAS_PX - 24)
     };
-    setPos(constrainToSafe(bounded));
+    setPos((prev) => {
+      const next = constrainToSafe(bounded);
+      if (prev.x === next.x && prev.y === next.y) return prev;
+      return next;
+    });
   };
 
-  const onPointerUp = (evt: React.PointerEvent<SVGTextElement>) => {
+  const onPointerUp = (evt: React.PointerEvent<SVGGraphicsElement>) => {
     drag.current.active = false;
     try {
       evt.currentTarget.releasePointerCapture(evt.pointerId);
@@ -270,10 +563,12 @@ export function InscriptionClient() {
       color,
       materialId,
       coverage,
-      pos
+      pos,
+      boxSide: product === 'box' ? boxSide : undefined,
+      boxSides: boxSidesSnapshot
     };
     return s;
-  }, [product, sizeCm, text, fontPresetId, fontSizePx, letterSpacing, color, materialId, coverage, pos]);
+  }, [product, sizeCm, text, fontPresetId, fontSizePx, letterSpacing, color, materialId, coverage, pos, boxSide, boxSidesSnapshot]);
 
   const projectId = useMemo(() => fnv1a(JSON.stringify(stateForId)), [stateForId]);
 
@@ -306,12 +601,14 @@ export function InscriptionClient() {
       const strokeColor = 'rgba(0,0,0,0.18)';
 
       const fontFace = (() => {
-        if (!(loadedFont && fontPresetId === 'uploaded')) return '';
-        const isOtf = loadedFont.fileName.toLowerCase().endsWith('.otf');
+        const embedFont = fontPresetId === 'uploaded' ? loadedFont : presetFont;
+        if (!embedFont) return '';
+        const safeName = embedFont.name.replace(/'/g, "\\'");
+        const isOtf = embedFont.fileName.toLowerCase().endsWith('.otf');
         const mime = isOtf ? 'font/otf' : 'font/ttf';
         const fmt = isOtf ? 'opentype' : 'truetype';
-        const b64 = arrayBufferToBase64(loadedFont.arrayBuffer);
-        return `@font-face { font-family: '${loadedFont.name}'; src: url('data:${mime};base64,${b64}') format('${fmt}'); }`;
+        const b64 = arrayBufferToBase64(embedFont.arrayBuffer);
+        return `@font-face { font-family: '${safeName}'; src: url('data:${mime};base64,${b64}') format('${fmt}'); }`;
       })();
 
       const lines = sanitizeText(text).split('\n');
@@ -347,6 +644,7 @@ export function InscriptionClient() {
       fontSizePx,
       letterSpacing,
       loadedFont,
+      presetFont,
       pos.x,
       pos.y,
       shape.outlinePath,
@@ -358,16 +656,9 @@ export function InscriptionClient() {
   );
 
   const downloadSvg = () => {
+    const sideSuffix = product === 'box' ? `-${boxSide}` : '';
     const svg = makeSvgText({ withGuides: true });
-    downloadBlob(`inscription-${projectId}.svg`, new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
-  };
-
-  const downloadPreviewPng = async () => {
-    const svg = makeSvgText({ withGuides: true });
-    const dataUrl = await svgToPngDataUrl(svg, 1200, 1200);
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
-    downloadBlob(`inscription-${projectId}.png`, blob);
+    downloadBlob(`inscription-${projectId}${sideSuffix}.svg`, new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
   };
 
   const downloadStateJson = () => {
@@ -377,7 +668,8 @@ export function InscriptionClient() {
       state: stateForId,
       note: 'This file stores only editor state. No personal data.'
     };
-    downloadBlob(`inscription-${projectId}.json`, new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+    const sideSuffix = product === 'box' ? `-${boxSide}` : '';
+    downloadBlob(`inscription-${projectId}${sideSuffix}.json`, new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
   };
 
   const importStateJson = async (file: File | null) => {
@@ -390,6 +682,45 @@ export function InscriptionClient() {
 
     setProduct(s.product);
     setSizeCm(s.sizeCm);
+
+    if (s.product === 'box' && s.boxSides) {
+      setBoxSideStates(s.boxSides);
+      const activeSide = s.boxSide ?? 'front';
+      setBoxSide(activeSide);
+      const activeState = s.boxSides[activeSide] ?? s.boxSides.front;
+      if (activeState) {
+        setText(activeState.text);
+        setFontPresetId(activeState.fontPresetId);
+        setFontSizePx(activeState.fontSizePx);
+        setLetterSpacing(activeState.letterSpacing);
+        setColor(activeState.color);
+        setMaterialId(activeState.materialId);
+        setCoverage(activeState.coverage);
+        setPos(activeState.pos);
+        return;
+      }
+    }
+
+    if (s.product === 'box') {
+      const base: BoxSideState = {
+        text: s.text,
+        fontPresetId: s.fontPresetId,
+        fontSizePx: s.fontSizePx,
+        letterSpacing: s.letterSpacing,
+        color: s.color,
+        materialId: s.materialId,
+        coverage: s.coverage,
+        pos: s.pos
+      };
+      setBoxSideStates({
+        front: { ...base },
+        right: { ...base },
+        back: { ...base },
+        left: { ...base }
+      });
+      setBoxSide(s.boxSide ?? 'front');
+    }
+
     setText(s.text);
     setFontPresetId(s.fontPresetId);
     setFontSizePx(s.fontSizePx);
@@ -400,14 +731,19 @@ export function InscriptionClient() {
     setPos(s.pos);
   };
 
-  // --- Path export (requires uploaded font) ---
-  const canExportCurves = !!loadedFont && fontPresetId === 'uploaded';
+  // --- Path export (requires font file: uploaded or preloaded) ---
+  const fontForCurves = useMemo(() => {
+    if (fontPresetId === 'uploaded') return loadedFont;
+    return presetFont;
+  }, [fontPresetId, loadedFont, presetFont]);
+
+  const canExportCurves = !!fontForCurves;
 
   const buildTextPathD = useCallback(() => {
-    if (!loadedFont) return null;
+    if (!fontForCurves) return null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const font: any = loadedFont.font;
+    const font: any = fontForCurves.font;
     const unitsPerEm = font.unitsPerEm || 1000;
     const scale = fontSizePx / unitsPerEm;
     const asc = (font.ascender || unitsPerEm * 0.8) * scale;
@@ -445,32 +781,69 @@ export function InscriptionClient() {
 
     // Return combined d and bbox for guides if needed
     return { d: paths.filter(Boolean).join(' '), approxW: maxW };
-  }, [fontPresetId, fontSizePx, letterSpacing, loadedFont, pos.x, pos.y, text]);
+  }, [fontForCurves, fontSizePx, letterSpacing, pos.x, pos.y, text]);
 
-  const downloadCutSvgCurves = () => {
-    if (!canExportCurves) return;
+  const buildCurvesPayload = useCallback(() => {
     const p = buildTextPathD();
-    if (!p) return;
-
+    if (!p) return null;
     const wMm = sizeCm * 10;
     const hMm = sizeCm * 10;
-
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${wMm}mm" height="${hMm}mm" viewBox="0 0 ${CANVAS_PX} ${CANVAS_PX}">
   <path d="${shape.safePath}" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="2" stroke-dasharray="10 8"/>
   <path d="${p.d}" fill="none" stroke="#000" stroke-width="1"/>
 </svg>`;
-
-    downloadBlob(`inscription-${projectId}-cut.svg`, new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
-  };
-
-  const downloadDxf = () => {
-    if (!canExportCurves) return;
-    const p = buildTextPathD();
-    if (!p) return;
-
     const dxf = svgPathToDxf(p.d, mmPerPx);
-    downloadBlob(`inscription-${projectId}-cut.dxf`, new Blob([dxf], { type: 'application/dxf' }));
+    return { svg, dxf };
+  }, [buildTextPathD, mmPerPx, shape.safePath, sizeCm]);
+
+  const saveExportToServer = useCallback(async () => {
+    if (!exportSessionId || !canExportCurves) return;
+    const payload = buildCurvesPayload();
+    if (!payload) return;
+    const fontName = fontPresetId === 'uploaded' && loadedFont ? loadedFont.name : selectedFont?.label ?? 'Unknown';
+    const fontId = selectedFont?.source === 'db' ? Number(selectedFont.id) : null;
+
+    try {
+      await fetch('/api/inscription/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: exportSessionId,
+          projectId,
+          product,
+          sizeCm,
+          fontId,
+          fontName,
+          color,
+          svg: payload.svg,
+          dxf: payload.dxf
+        })
+      });
+    } catch {
+      // ignore upload errors for now
+    }
+  }, [
+    buildCurvesPayload,
+    canExportCurves,
+    color,
+    exportSessionId,
+    fontPresetId,
+    loadedFont,
+    product,
+    projectId,
+    selectedFont,
+    sizeCm
+  ]);
+
+  const downloadPreviewPng = async () => {
+    const svg = makeSvgText({ withGuides: true });
+    const dataUrl = await svgToPngDataUrl(svg, 1200, 1200);
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const sideSuffix = product === 'box' ? `-${boxSide}` : '';
+    downloadBlob(`inscription-${projectId}${sideSuffix}.png`, blob);
+    void saveExportToServer();
   };
 
   const fitToSafe = () => {
@@ -485,15 +858,17 @@ export function InscriptionClient() {
     const test = (fs: number) => {
       // approximate bbox scaling by ratio (fast) — we also force a measure after setting size
       const ratio = fs / fontSizePx;
-      const w = bboxSize.w * ratio;
-      const h = bboxSize.h * ratio;
-      const halfW = w / 2;
-      const halfH = h / 2;
+      const w = bbox.w * ratio;
+      const h = bbox.h * ratio;
+      const offsetX = bbox.offsetX * ratio;
+      const offsetY = bbox.offsetY * ratio;
+      const x0 = pos.x + offsetX;
+      const y0 = pos.y + offsetY;
       const pts: Point[] = [
-        { x: pos.x - halfW, y: pos.y - halfH },
-        { x: pos.x + halfW, y: pos.y - halfH },
-        { x: pos.x + halfW, y: pos.y + halfH },
-        { x: pos.x - halfW, y: pos.y + halfH }
+        { x: x0, y: y0 },
+        { x: x0 + w, y: y0 },
+        { x: x0 + w, y: y0 + h },
+        { x: x0, y: y0 + h }
       ];
 
       if (shape.kind === 'circle') {
@@ -538,6 +913,19 @@ export function InscriptionClient() {
                 strokeDasharray="10 8"
               />
             ) : null}
+
+            <rect
+              x={pos.x + dragTarget.offsetX}
+              y={pos.y + dragTarget.offsetY}
+              width={dragTarget.w}
+              height={dragTarget.h}
+              fill="transparent"
+              pointerEvents="all"
+              style={{ cursor: 'grab', touchAction: 'none' }}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+            />
 
             <text
               ref={textRef}
@@ -593,8 +981,16 @@ export function InscriptionClient() {
             <div className="kpi">
               <div className="kpi__label">Вес (оценка)</div>
               <div className="kpi__value">
-                {weightG.toFixed(2)} г / лимит {payloadLimit.toFixed(2)} г{' '}
-                {payloadOk ? <span className="ok">OK</span> : <span className="bad">Слишком много</span>}
+                {hasPayloadLimit ? (
+                  <>
+                    {weightG.toFixed(2)} г / лимит {payloadLimit.toFixed(2)} г{' '}
+                    {payloadOk ? <span className="ok">OK</span> : <span className="bad">Слишком много</span>}
+                  </>
+                ) : (
+                  <>
+                    {weightG.toFixed(2)} г / без лимита <span className="ok">OK</span>
+                  </>
+                )}
               </div>
             </div>
 
@@ -604,6 +1000,13 @@ export function InscriptionClient() {
                 {insideNow ? <span className="ok">Текст в зоне</span> : <span className="bad">Выходит за границы</span>}
               </div>
             </div>
+
+            {product === 'box' ? (
+              <div className="kpi">
+                <div className="kpi__label">Сторона</div>
+                <div className="kpi__value">{BOX_SIDES.find((side) => side.id === boxSide)?.label}</div>
+              </div>
+            ) : null}
 
             <div className="hero__actions" style={{ marginTop: 10, flexWrap: 'wrap' }}>
               <Button onClick={downloadPreviewPng} type="button" variant="secondary">
@@ -617,18 +1020,16 @@ export function InscriptionClient() {
               </Button>
             </div>
 
-            <div className="hero__actions" style={{ marginTop: 10, flexWrap: 'wrap' }}>
-              <Button onClick={downloadCutSvgCurves} type="button" variant="primary" disabled={!canExportCurves}>
-                SVG (кривые)
-              </Button>
-              <Button onClick={downloadDxf} type="button" variant="primary" disabled={!canExportCurves}>
-                DXF (для Silhouette)
-              </Button>
-            </div>
+            {product === 'box' ? (
+              <p className="muted" style={{ marginTop: 10 }}>
+                Для коробки ограничений по весу нет — надпись можно клеить на любую из 4 сторон.
+              </p>
+            ) : null}
 
             <p className="muted" style={{ marginTop: 10 }}>
-              Для экспорта “кривыми” загрузите TTF/OTF шрифт. Формат <b>.studio3</b> является закрытым; для Silhouette
-              Studio используйте DXF (обычно поддерживается), либо SVG (обычно требует Business Edition).
+              Файлы для плоттера сохраняются автоматически при скачивании превью. Форматы <b>.studio3</b>, <b>.studio</b> и
+              <b>.gsp</b> закрытые; для Silhouette Studio используйте DXF (обычно поддерживается), либо SVG (обычно требует
+              Business Edition).
             </p>
           </div>
         </div>
@@ -642,8 +1043,32 @@ export function InscriptionClient() {
                 value={product}
                 onChange={(e) => {
                   const p = e.target.value as ProductType;
+                  const boxSnapshot =
+                    product === 'box'
+                      ? {
+                          ...boxSideStates,
+                          [boxSide]: activeBoxSideState
+                        }
+                      : boxSideStates;
+                  if (product === 'box') {
+                    setBoxSideStates(boxSnapshot);
+                  }
                   setProduct(p);
                   setSizeCm(PRODUCT_SIZES_CM[p][0]);
+                  if (p === 'box') {
+                    const nextState = boxSnapshot[boxSide] ?? activeBoxSideState;
+                    if (nextState) {
+                      setText(nextState.text);
+                      setFontPresetId(nextState.fontPresetId);
+                      setFontSizePx(nextState.fontSizePx);
+                      setLetterSpacing(nextState.letterSpacing);
+                      setColor(nextState.color);
+                      setMaterialId(nextState.materialId);
+                      setCoverage(nextState.coverage);
+                      setPos(nextState.pos);
+                      return;
+                    }
+                  }
                   setPos({ x: CANVAS_PX / 2, y: CANVAS_PX / 2 });
                 }}
               >
@@ -666,6 +1091,40 @@ export function InscriptionClient() {
               </select>
             </label>
 
+            {product === 'box' ? (
+              <label className="field">
+                <span className="field__label">Сторона коробки</span>
+                <select
+                  className="field__control"
+                  value={boxSide}
+                  onChange={(e) => {
+                    const nextSide = e.target.value as BoxSide;
+                    const nextSnapshot = {
+                      ...boxSideStates,
+                      [boxSide]: activeBoxSideState
+                    };
+                    setBoxSideStates(nextSnapshot);
+                    const nextState = nextSnapshot[nextSide] ?? activeBoxSideState;
+                    setBoxSide(nextSide);
+                    setText(nextState.text);
+                    setFontPresetId(nextState.fontPresetId);
+                    setFontSizePx(nextState.fontSizePx);
+                    setLetterSpacing(nextState.letterSpacing);
+                    setColor(nextState.color);
+                    setMaterialId(nextState.materialId);
+                    setCoverage(nextState.coverage);
+                    setPos(nextState.pos);
+                  }}
+                >
+                  {BOX_SIDES.map((side) => (
+                    <option key={side.id} value={side.id}>
+                      {side.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
             <label className="field">
               <span className="field__label">Текст (до {MAX_LINES} строк / {MAX_CHARS} символов)</span>
               <textarea
@@ -681,9 +1140,9 @@ export function InscriptionClient() {
               <label className="field">
                 <span className="field__label">Шрифт (предпросмотр)</span>
                 <select className="field__control" value={fontPresetId} onChange={(e) => setFontPresetId(e.target.value)}>
-                  {FONT_PRESETS.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.label}
+                  {fontOptions.map((font) => (
+                    <option key={font.id} value={font.id}>
+                      {font.label}
                     </option>
                   ))}
                   <option value="uploaded">Загруженный шрифт</option>
@@ -699,6 +1158,13 @@ export function InscriptionClient() {
             {loadedFont ? (
               <div className="muted" style={{ marginTop: 4 }}>
                 Загружен шрифт: <b>{loadedFont.fileName}</b>
+              </div>
+            ) : null}
+
+            {cyrillicStatus.unsupported.length ? (
+              <div className="notice notice--warn" role="status" style={{ marginTop: 8 }}>
+                Шрифт не поддерживает кириллицу: <b>{cyrillicUnsupportedPreview}</b>. Выберите другой шрифт или загрузите TTF/OTF
+                с нужными символами.
               </div>
             ) : null}
 
@@ -731,10 +1197,21 @@ export function InscriptionClient() {
             </div>
 
             <div className="grid inscription__grid" style={{ marginTop: 12 }}>
-              <label className="field">
+              <div className="field">
                 <span className="field__label">Цвет надписи</span>
-                <input className="field__control" type="color" value={color} onChange={(e) => setColor(e.target.value)} />
-              </label>
+                <div className="swatches">
+                  {colorOptions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={`swatch ${color.toLowerCase() === c.value.toLowerCase() ? 'swatch--active' : ''}`}
+                      title={c.label}
+                      onClick={() => setColor(c.value)}
+                      style={{ background: c.value }}
+                    />
+                  ))}
+                </div>
+              </div>
 
               <label className="field">
                 <span className="field__label">Материал</span>
@@ -746,19 +1223,6 @@ export function InscriptionClient() {
                   ))}
                 </select>
               </label>
-            </div>
-
-            <div className="swatches">
-              {COLOR_PRESETS.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`swatch ${color.toLowerCase() === c.value.toLowerCase() ? 'swatch--active' : ''}`}
-                  title={c.label}
-                  onClick={() => setColor(c.value)}
-                  style={{ background: c.value }}
-                />
-              ))}
             </div>
 
             <div className="grid inscription__grid" style={{ marginTop: 12 }}>

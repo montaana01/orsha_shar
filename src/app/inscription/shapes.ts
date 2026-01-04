@@ -28,6 +28,17 @@ export function starPoints(sizePx: number): Point[] {
   return pts;
 }
 
+export function boxPoints(sizePx: number): Point[] {
+  const max = sizePx - PAD;
+  const min = PAD;
+  return [
+    { x: min, y: min },
+    { x: max, y: min },
+    { x: max, y: max },
+    { x: min, y: max }
+  ];
+}
+
 export function pointsToPath(points: Point[]): string {
   if (!points.length) return '';
   return `M ${points[0].x} ${points[0].y} ` + points.slice(1).map((p) => `L ${p.x} ${p.y}`).join(' ') + ' Z';
@@ -58,6 +69,21 @@ export type ShapeDef =
 export function getShape(type: ProductType, sizePx: number): ShapeDef {
   const c = sizePx / 2;
   const inset = SAFE_INSET[type];
+
+  if (type === 'box') {
+    const outer = boxPoints(sizePx);
+    const safe = scalePoints(outer, c, c, inset);
+    return {
+      kind: 'polygon',
+      sizePx,
+      cx: c,
+      cy: c,
+      outlinePath: pointsToPath(outer),
+      safePath: pointsToPath(safe),
+      outerPoints: outer,
+      safePoints: safe
+    };
+  }
 
   if (type === 'foilStar') {
     const outer = starPoints(sizePx);

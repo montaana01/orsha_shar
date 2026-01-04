@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import type { Category } from '@/content/categories';
+import type { Category } from '@/lib/data';
 
 export function CategoryGrid({ categories }: { categories: Category[] }) {
   return (

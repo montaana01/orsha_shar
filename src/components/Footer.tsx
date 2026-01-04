@@ -30,11 +30,11 @@ export function Footer() {
                 Instagram
               </a>
             </li>
-            <li>
+            {/* <li>
               <a href={site.socials.vk} target="_blank" rel="noopener noreferrer">
                 VK
               </a>
-            </li>
+            </li> */}
             <li>
               <a href={site.socials.ok} target="_blank" rel="noopener noreferrer">
                 OK

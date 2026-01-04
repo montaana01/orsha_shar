@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { InscriptionClient } from './InscriptionClient';
+import { getColors, getFonts } from '@/lib/data';
 
 export const metadata: Metadata = {
   title: 'Конфигуратор надписи для фигуры',
@@ -7,6 +8,10 @@ export const metadata: Metadata = {
     'Редактор надписи для шара, фольгированной звезды и bubble. Выбор шрифта/цвета и текста.'
 };
 
-export default function Page() {
-  return <InscriptionClient />;
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+export default async function Page() {
+  const [fonts, colors] = await Promise.all([getFonts().catch(() => []), getColors().catch(() => [])]);
+  return <InscriptionClient fonts={fonts} colors={colors} />;
 }

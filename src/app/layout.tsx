@@ -4,6 +4,10 @@ import './globals.css';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { site } from '@/content/site';
+import { getPublicCategories } from '@/lib/public-data';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -14,14 +18,14 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: 'Гелиевые шары в Орше — ORSHA SHAR',
-    template: '%s — ORSHA SHAR'
+    default: 'Гелиевые шары в Орше — Орша Шар',
+    template: '%s — Орша Шар'
   },
   description:
     'Гелиевые шары, фотозоны, украшения для торжеств в Орше.',
   icons: {
-    icon: '/assets/icon.webp',
-    apple: '/assets/icon.webp'
+    icon: '/assets/orsha-shar.webp',
+    apple: '/assets/orsha-shar.webp'
   },
   openGraph: {
     type: 'website',
@@ -32,11 +36,13 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const categories = await getPublicCategories();
+
   return (
-    <html lang="ru">
+    <html lang="ru" data-scroll-behavior="smooth">
       <body className="app">
-        <Header />
+        <Header categories={categories} />
         <main className="main">{children}</main>
         <Footer />
       </body>
