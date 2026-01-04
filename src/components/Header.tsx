@@ -18,7 +18,8 @@ export function Header() {
   const navItems: NavItem[] = useMemo(
     () => [
       ...categories.map((c) => ({ href: `/${c.slug}`, label: c.title })),
-      { href: '/configurator', label: 'Конфигуратор' }
+      { href: '/configurator', label: 'Конфигуратор' },
+      { href: '/inscription', label: 'Макет надписи' }
     ],
     []
   );
@@ -39,7 +40,7 @@ export function Header() {
       <div className="container header__inner">
         <Link href="/" className="header__brand" aria-label={`${site.name} — главная`}>
           <span className="header__mark" aria-hidden="true">
-            <Image src="/assets/logo.webp" alt="" width={36} height={36} priority />
+            <Image src="/assets/orsha-shar.webp" alt="Orsha-shar" width={44} height={44} priority />
           </span>
           <span className="header__brandText">
             <span className="header__brandName">{site.name}</span>

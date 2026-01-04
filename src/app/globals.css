@@ -71,7 +71,9 @@ a:hover {
 
 /* -------- Layout primitives -------- */
 .app {
-  min-height: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 .container {
@@ -85,6 +87,7 @@ a:hover {
   max-width: var(--container);
   margin: 0 auto;
   padding: 28px 20px 64px;
+  flex: 1;
 }
 
 .muted {
@@ -133,15 +136,25 @@ h3 {
   gap: 10px;
 }
 
+.header__logo {
+  display: inline-flex;
+  align-items: center;
+}
+
+.header__logoImg {
+  height: 44px;
+  width: auto;
+}
+
 .header__mark {
-  width: 38px;
-  height: 38px;
-  border-radius: 14px;
+  width: 44px;
+  height: 44px;
+  /* border-radius: 14px;
   overflow: hidden;
   border: 1px solid rgba(17, 18, 19, 0.08);
   background: rgb(241 192 198 / 74%);
   box-shadow: var(--shadow-sm);
-  flex: 0 0 auto;
+  flex: 0 0 auto; */
   display: grid;
   place-items: center;
 }
@@ -465,6 +478,15 @@ h3 {
   cursor: pointer;
   transition: transform 120ms ease, filter 120ms ease, background 120ms ease, border-color 120ms ease;
 }
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  filter: none !important;
+}
+
 
 .btn:hover {
   filter: saturate(1.03);
@@ -909,5 +931,127 @@ h3 {
   .btn:hover,
   .card:hover {
     transform: none;
+  }
+}
+
+/* --- Inscription editor --- */
+.inscription {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 1fr;
+}
+
+.inscription__preview {
+  padding: 16px;
+}
+
+.inscription__controls {
+  padding: 16px;
+}
+
+.inscription__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.inscription__grid .field {
+  min-width: 0;
+}
+
+.inscription__grid .field__control {
+  width: 100%;
+}
+
+.inscription__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(241, 192, 198, .45), rgba(182, 144, 149, 0.55));
+}
+
+.inscription__stats {
+  margin-top: 14px;
+}
+
+.kpi {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.kpi:last-child {
+  border-bottom: none;
+}
+
+.kpi__label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.kpi__value {
+  font-size: 14px;
+}
+
+.ok {
+  color: #0a7a3b;
+  font-weight: 700;
+}
+
+.bad {
+  color: #b10d0d;
+  font-weight: 700;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.swatch--active {
+  box-shadow: var(--focus);
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+
+.toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+@media (min-width: 980px) {
+  .inscription {
+    grid-template-columns: 1fr 420px;
+    align-items: start;
+  }
+}
+
+@media (max-width: 700px) {
+  .inscription__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .kpi {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 }

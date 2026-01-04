@@ -113,7 +113,7 @@ export function ConfiguratorClient({ initialType }: { initialType: string | unde
           <a className="btn btn--secondary" href={telegramShare} target="_blank" rel="noopener noreferrer">
             Написать в Telegram
           </a>
-          <a className="btn btn--ghost" href={site.socials.instagram} target="_blank" rel="noopener noreferrer">
+          <a className="btn btn--ghost" href={site.socials.instagramDm} target="_blank" rel="noopener noreferrer">
             Написать в Instagram
           </a>
         </div>

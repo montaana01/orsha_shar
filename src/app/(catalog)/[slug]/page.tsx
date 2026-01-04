@@ -49,7 +49,7 @@ export default async function CategoryPage({ params }: Props) {
             <h1 className="pageHead__title">{category.title}</h1>
             <p className="pageHead__subtitle">{category.description}</p>
             <div className="pageHead__actions">
-              <Button href={site.socials.instagram} external variant="primary">
+              <Button href={site.socials.instagramDm} external variant="primary">
                 Заказать в Instagram
               </Button>
               {site.socials.telegram ? (

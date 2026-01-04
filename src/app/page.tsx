@@ -36,7 +36,7 @@ export default function HomePage() {
               <a className="btn btn--primary" href={telHref(phone)}>
                 Позвонить
               </a>
-              <Button href={site.socials.instagram} external variant="secondary">
+              <Button href={site.socials.instagramDm} external variant="secondary">
                 Написать в Instagram
               </Button>
               {hasTelegram ? (
