@@ -28,6 +28,73 @@ export function starPoints(sizePx: number): Point[] {
   return pts;
 }
 
+export function heartPoints(sizePx: number): Point[] {
+  const sampleCubic = (p0: Point, p1: Point, p2: Point, p3: Point, steps: number) => {
+    const pts: Point[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const mt = 1 - t;
+      const mt2 = mt * mt;
+      const t2 = t * t;
+      const x = p0.x * mt2 * mt + 3 * p1.x * mt2 * t + 3 * p2.x * mt * t2 + p3.x * t2 * t;
+      const y = p0.y * mt2 * mt + 3 * p1.y * mt2 * t + 3 * p2.y * mt * t2 + p3.y * t2 * t;
+      pts.push({ x, y });
+    }
+    return pts;
+  };
+
+  const p0 = { x: 0.5, y: 0.24 };
+  const p1 = { x: 0.38, y: 0.05 };
+  const p2 = { x: 0.16, y: 0.1 };
+  const p3 = { x: 0.08, y: 0.4 };
+
+  const p4 = { x: 0.04, y: 0.7 };
+  const p5 = { x: 0.28, y: 0.95 };
+  const p6 = { x: 0.5, y: 0.98 };
+
+  const p7 = { x: 0.72, y: 0.95 };
+  const p8 = { x: 0.96, y: 0.7 };
+  const p9 = { x: 0.92, y: 0.4 };
+
+  const p10 = { x: 0.84, y: 0.1 };
+  const p11 = { x: 0.62, y: 0.05 };
+  const p12 = { x: 0.5, y: 0.24 };
+
+  const segments = [
+    [p0, p1, p2, p3],
+    [p3, p4, p5, p6],
+    [p6, p7, p8, p9],
+    [p9, p10, p11, p12]
+  ] as const;
+
+  const raw: Point[] = [];
+  segments.forEach((seg, idx) => {
+    const sampled = sampleCubic(seg[0], seg[1], seg[2], seg[3], 36);
+    if (idx > 0) sampled.shift();
+    raw.push(...sampled);
+  });
+
+  const xs = raw.map((p) => p.x);
+  const ys = raw.map((p) => p.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const width = maxX - minX;
+  const height = maxY - minY;
+  const target = sizePx - PAD * 2;
+  const scale = Math.min(target / width, target / height);
+  const cx = sizePx / 2;
+  const cy = sizePx / 2;
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+
+  return raw.map((p) => ({
+    x: cx + (p.x - centerX) * scale,
+    y: cy + (p.y - centerY) * scale
+  }));
+}
+
 export function boxPoints(sizePx: number): Point[] {
   const max = sizePx - PAD;
   const min = PAD;
@@ -87,6 +154,21 @@ export function getShape(type: ProductType, sizePx: number): ShapeDef {
 
   if (type === 'foilStar') {
     const outer = starPoints(sizePx);
+    const safe = scalePoints(outer, c, c, inset);
+    return {
+      kind: 'polygon',
+      sizePx,
+      cx: c,
+      cy: c,
+      outlinePath: pointsToPath(outer),
+      safePath: pointsToPath(safe),
+      outerPoints: outer,
+      safePoints: safe
+    };
+  }
+
+  if (type === 'foilHeart') {
+    const outer = heartPoints(sizePx);
     const safe = scalePoints(outer, c, c, inset);
     return {
       kind: 'polygon',

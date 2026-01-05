@@ -1,7 +1,8 @@
-export type ProductType = 'foilStar' | 'foilCircle' | 'bubble' | 'box';
+export type ProductType = 'foilStar' | 'foilHeart' | 'foilCircle' | 'bubble' | 'box';
 
 export const PRODUCT_LABEL: Record<ProductType, string> = {
-  foilStar: 'Звезда/сердце (фольга)',
+  foilStar: 'Звезда (фольга)',
+  foilHeart: 'Сердце (фольга)',
   foilCircle: 'Круг (фольга)',
   bubble: 'Шар Bubbles',
   box: 'Коробка сюрприз'
@@ -10,6 +11,7 @@ export const PRODUCT_LABEL: Record<ProductType, string> = {
 export const PRODUCT_SIZES_CM: Record<ProductType, number[]> = {
   box: [60],
   foilStar: [30, 34, 50],
+  foilHeart: [30, 34, 50],
   foilCircle: [30, 50, 60, 65],
   bubble: [42, 50, 65]
 };
@@ -21,6 +23,7 @@ export const PRODUCT_SIZES_CM: Record<ProductType, number[]> = {
 export const SAFE_INSET: Record<ProductType, number> = {
   box: 1,
   foilStar: 0.76,
+  foilHeart: 0.78,
   foilCircle: 0.8,
   bubble: 0.8
 };
@@ -35,20 +38,25 @@ export const PAYLOAD_LIMIT_G: Record<ProductType, Record<number, number>> = {
     60: Number.POSITIVE_INFINITY,
   },
   foilStar: {
-    30: 7,
-    34: 7,
-    50: 7
+    30: 8,
+    34: 9,
+    50: 11
+  },
+  foilHeart: {
+    30: 8,
+    34: 9,
+    50: 11
   },
   foilCircle: {
-    30: 7,
-    50: 7,
-    60: 7,
-    65: 7
+    30: 8,
+    50: 9,
+    60: 10,
+    65: 11
   },
   bubble: {
     42: 9,
-    50: 9,
-    65: 9
+    50: 10,
+    65: 11
   }
 };
 

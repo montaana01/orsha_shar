@@ -37,6 +37,7 @@ export function ColorPickerField({ name, defaultValue = '#FFFFFF', disabled }: P
       <input
         className="colorPicker__input"
         type="color"
+        id={`color-picker-${name}`}
         value={value}
         onChange={(e) => syncValue(e.target.value)}
         disabled={disabled}
@@ -45,6 +46,7 @@ export function ColorPickerField({ name, defaultValue = '#FFFFFF', disabled }: P
       <input
         className="field__control colorPicker__hex"
         type="text"
+        id={`color-hex-${name}`}
         value={hexInput}
         onChange={(e) => {
           const raw = e.target.value.toUpperCase();

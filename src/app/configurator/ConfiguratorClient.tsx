@@ -107,7 +107,7 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
         <div className="form">
           <label className="field">
             <span className="field__label">Категория</span>
-            <select className="field__control" value={type} onChange={(event) => setType(event.target.value as RequestType)}>
+            <select className="field__control" name="category" value={type} onChange={(event) => setType(event.target.value as RequestType)}>
               {categories.map((category) => (
                 <option key={category.slug} value={category.slug}>
                   {category.title}
@@ -121,6 +121,7 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
             <span className="field__label">Повод / событие</span>
             <input
               className="field__control"
+              name="occasion"
               value={occasion}
               onChange={(event) => setOccasion(event.target.value)}
               placeholder="День рождения, свадьба, выписка из роддома..."
@@ -130,7 +131,7 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
 
           <label className="field">
             <span className="field__label">Дата</span>
-            <input className="field__control" type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
+            <input className="field__control" name="date" type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
           </label>
 
           <div className="field">
@@ -171,6 +172,7 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
               <span className="field__label">Время</span>
               <input
                 className="field__control"
+                name="time_exact"
                 type="time"
                 value={timeExact}
                 onChange={(event) => setTimeExact(event.target.value)}
@@ -183,6 +185,7 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
                 <span className="field__label">С</span>
                 <input
                   className="field__control"
+                  name="time_from"
                   type="time"
                   value={timeFrom}
                   onChange={(event) => setTimeFrom(event.target.value)}
@@ -193,6 +196,7 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
                 <span className="field__label">До</span>
                 <input
                   className="field__control"
+                  name="time_to"
                   type="time"
                   value={timeTo}
                   onChange={(event) => setTimeTo(event.target.value)}
@@ -206,6 +210,7 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
             <span className="field__label">Адрес / локация</span>
             <input
               className="field__control"
+              name="location"
               value={location}
               onChange={(event) => setLocation(event.target.value)}
               placeholder="Орша, ..."
@@ -217,6 +222,7 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
             <span className="field__label">Контакт для связи</span>
             <input
               className="field__control"
+              name="contact"
               value={contact}
               onChange={(event) => setContact(event.target.value)}
               placeholder="Телефон, @ник или ссылка на соцсеть"
@@ -228,6 +234,7 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
             <span className="field__label">Цвета / стиль</span>
             <input
               className="field__control"
+              name="colors"
               value={colors}
               onChange={(event) => setColors(event.target.value)}
               placeholder="Белый+золото, пастель, гендер-пати..."
@@ -237,12 +244,12 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
 
           <label className="field">
             <span className="field__label">Бюджет</span>
-            <input className="field__control" value={budget} onChange={(event) => setBudget(event.target.value)} placeholder="Например: до 100 BYN" required />
+            <input className="field__control" name="budget" value={budget} onChange={(event) => setBudget(event.target.value)} placeholder="Например: до 100 BYN" required />
           </label>
 
           <label className="field field--full">
             <span className="field__label">Комментарий</span>
-            <textarea className="field__control" rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Размеры, надпись, наполнение, пожелания..." />
+            <textarea className="field__control" name="notes" rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Размеры, надпись, наполнение, пожелания..." />
           </label>
         </div>
       </div>

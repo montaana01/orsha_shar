@@ -854,6 +854,12 @@ h3 {
   transition: transform 140ms ease, box-shadow 140ms ease;
 }
 
+.card__link {
+  display: grid;
+  color: inherit;
+  text-decoration: none;
+}
+
 .card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow);
@@ -874,6 +880,13 @@ h3 {
   padding: 14px 14px 16px;
 }
 
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 14px 16px;
+}
+
 .card__title {
   margin: 0 0 6px 0;
   font-size: 18px;
@@ -884,6 +897,36 @@ h3 {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
+}
+
+/* -------- Admin header -------- */
+.adminHead__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.adminHead__meta {
+  min-width: 0;
+}
+
+.adminHead__actions {
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .adminHead__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .adminHead__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* -------- Category page head -------- */
@@ -1000,6 +1043,18 @@ h3 {
   display: grid;
   gap: 18px;
   grid-template-columns: 1fr;
+}
+
+.configurator .field__control {
+  width: 100%;
+}
+
+.configurator .field {
+  min-width: 0;
+}
+
+.configurator .grid {
+  min-width: 0;
 }
 
 @media (min-width: 980px) {
@@ -1178,6 +1233,29 @@ h3 {
 .inscription__controls {
   padding: 16px;
   min-width: 0;
+}
+
+.inscription__controls .field {
+  min-width: 0;
+}
+
+.inscription__controls .field__control {
+  width: 100%;
+  max-width: 100%;
+}
+
+.inscription__controls .grid {
+  min-width: 0;
+}
+
+.inscription__controls select,
+.inscription__controls input,
+.inscription__controls textarea {
+  max-width: 100%;
+}
+
+.inscription__controls .hero__actions {
+  flex-wrap: wrap;
 }
 
 .inscription__grid {

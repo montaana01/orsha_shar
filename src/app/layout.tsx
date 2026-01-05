@@ -71,11 +71,12 @@ gtag('config', 'G-NZQNHDRLX7');`}
         <Header categories={categories} />
         <main className="main">{children}</main>
         <Footer />
-        <noscript>
-          <div>
-            <img src="https://mc.yandex.ru/watch/72543040" style={{ position: 'absolute', left: '-9999px' }} alt="" />
-          </div>
-        </noscript>
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html:
+              '<div><img src="https://mc.yandex.ru/watch/72543040" style="position:absolute; left:-9999px;" alt="" /></div>'
+          }}
+        />
       </body>
     </html>
   );

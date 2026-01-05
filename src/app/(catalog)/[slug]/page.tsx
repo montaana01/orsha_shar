@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import { site } from '@/content/site';
+import { site, telHref } from '@/content/site';
 import { getCategoryImagesBySlug } from '@/lib/data';
 import { getPublicCategoryBySlug } from '@/lib/public-data';
 import { Button } from '@/components/Button';
@@ -49,6 +49,11 @@ export default async function CategoryPage({ params }: Props) {
             <h1 className="pageHead__title">{category.title}</h1>
             <p className="pageHead__subtitle">{category.description}</p>
             <div className="pageHead__actions">
+              {site.contacts.phones[0] ? (
+                <a className="btn btn--secondary" href={telHref(site.contacts.phones[0])}>
+                  Позвонить
+                </a>
+              ) : null}
               <Button href={site.socials.instagramDm} external variant="primary">
                 Заказать в Instagram
               </Button>

@@ -16,7 +16,7 @@ import {
 } from '@/content/inscription';
 import type { ColorPreset, FontPreset } from '@/lib/data';
 import { fnv1a } from '@/lib/hash';
-import { getShape, pointInPolygon, type Point } from './shapes';
+import { getShape, pointInPolygon, pointsToPath, type Point } from './shapes';
 import { Button } from '@/components/Button';
 
 const CANVAS_PX = 720;
@@ -906,7 +906,12 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
   // Ensure current pos stays valid when geometry changes
   useEffect(() => {
-    setPos((p) => constrainToSafe(p));
+    if (drag.current.active) return;
+    setPos((p) => {
+      const next = constrainToSafe(p);
+      if (Math.abs(p.x - next.x) < 0.5 && Math.abs(p.y - next.y) < 0.5) return p;
+      return next;
+    });
   }, [constrainToSafe]);
 
   useEffect(() => {
@@ -1053,7 +1058,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     };
     setPos((prev) => {
       const next = constrainToSafe(bounded);
-      if (prev.x === next.x && prev.y === next.y) return prev;
+      if (Math.abs(prev.x - next.x) < 0.5 && Math.abs(prev.y - next.y) < 0.5) return prev;
       return next;
     });
   };
@@ -1350,9 +1355,71 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 <svg xmlns="http://www.w3.org/2000/svg" width="${wMm}mm" height="${hMm}mm" viewBox="0 0 ${CANVAS_PX} ${CANVAS_PX}">
   <path d="${combinedD}" fill="none" stroke="#000" stroke-width="1"/>
 </svg>`;
-    const dxf = svgPathToDxf(combinedD, mmPerPx * DXF_SCALE);
+    const bounds = (() => {
+      if (shape.kind === 'circle') {
+        return {
+          minX: shape.cx - shape.outerRadius,
+          maxX: shape.cx + shape.outerRadius,
+          minY: shape.cy - shape.outerRadius,
+          maxY: shape.cy + shape.outerRadius
+        };
+      }
+      const xs = shape.outerPoints.map((p) => p.x);
+      const ys = shape.outerPoints.map((p) => p.y);
+      return {
+        minX: Math.min(...xs),
+        maxX: Math.max(...xs),
+        minY: Math.min(...ys),
+        maxY: Math.max(...ys)
+      };
+    })();
+
+    const measureY = Math.min(CANVAS_PX - 32, bounds.maxY + 12);
+    const labelY = Math.min(CANVAS_PX - 12, measureY + 16);
+    const measureD = [
+      `M ${bounds.minX} ${measureY} L ${bounds.maxX} ${measureY}`,
+      `M ${bounds.minX} ${measureY - 6} L ${bounds.minX} ${measureY + 6}`,
+      `M ${bounds.maxX} ${measureY - 6} L ${bounds.maxX} ${measureY + 6}`
+    ].join(' ');
+
+    let labelD = '';
+    const labelFontData = getFontForLayer(activeLayersSnapshot[0]);
+    if (labelFontData) {
+      const labelLayer: TextLayer = {
+        id: 'measure',
+        name: 'Размер',
+        text: `${sizeCm} см`,
+        fontPresetId: activeLayersSnapshot[0]?.fontPresetId ?? 'uploaded',
+        fontSizePx: 18,
+        lineHeightMult: 1.1,
+        letterSpacing: 0,
+        color: '#000000',
+        pos: { x: (bounds.minX + bounds.maxX) / 2, y: labelY }
+      };
+      const labelPath = buildTextPathD(labelLayer, labelFontData);
+      labelD = labelPath?.d ?? '';
+    }
+
+    const outlineD = (() => {
+      if (shape.kind !== 'circle') return shape.outlinePath;
+      const segments = 64;
+      const pts = Array.from({ length: segments }, (_, i) => {
+        const ang = (i / segments) * Math.PI * 2;
+        return { x: shape.cx + shape.outerRadius * Math.cos(ang), y: shape.cy + shape.outerRadius * Math.sin(ang) };
+      });
+      return pointsToPath(pts);
+    })();
+
+    const refPaths = [outlineD, measureD, labelD].filter(Boolean);
+    const dxf = pathsToDxf(
+      [
+        { d: combinedD, layer: 'CUT' },
+        ...(refPaths.length ? [{ d: refPaths.join(' '), layer: 'REF' }] : [])
+      ],
+      mmPerPx * DXF_SCALE
+    );
     return { svg, dxf };
-  }, [activeLayersSnapshot, buildTextPathD, canExportCurves, getFontForLayer, mmPerPx, sizeCm]);
+  }, [activeLayersSnapshot, buildTextPathD, canExportCurves, getFontForLayer, mmPerPx, shape, sizeCm]);
 
   const exportMeta = useMemo(() => {
     if (!activeLayersSnapshot.length) {
@@ -1558,11 +1625,11 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             <form onSubmit={handleClientSubmit} className="form" style={{ marginTop: 12 }}>
               <label className="field">
                 <span className="field__label">Имя</span>
-                <input className="field__control" value={clientName} onChange={(e) => setClientName(e.target.value)} required />
+                <input className="field__control" name="client_name" value={clientName} onChange={(e) => setClientName(e.target.value)} required />
               </label>
               <label className="field">
                 <span className="field__label">Контакт/телефон</span>
-                <input className="field__control" value={clientContact} onChange={(e) => setClientContact(e.target.value)} required />
+                <input className="field__control" name="client_contact" value={clientContact} onChange={(e) => setClientContact(e.target.value)} required />
               </label>
               <div className="hero__actions" style={{ marginTop: 12, justifyContent: 'flex-end' }}>
                 {clientReady ? (
@@ -1585,8 +1652,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       <div className="section__head">
         <h1 className="section__title">Надпись онлайн</h1>
         <p className="section__subtitle">
-          Сделайте макет надписи для шара, фольгированной звезды/сердца, фольгированного круга или bubble. Добавляйте несколько
-          слоёв текста, настраивайте шрифт и цвет, скачайте превью и файл для плоттера.
+          Сделайте макет надписи для шара, фольгированной звезды, сердца, круга или bubble. Добавляйте несколько слоёв текста,
+          настраивайте шрифт и цвет, скачайте превью и файл для плоттера.
         </p>
       </div>
 
@@ -1774,6 +1841,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
               <span className="field__label">Изделие</span>
               <select
                 className="field__control"
+                name="product"
                 value={product}
                 onChange={(e) => {
                   const p = e.target.value as ProductType;
@@ -1802,7 +1870,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
             <label className="field">
               <span className="field__label">Размер изделия (см)</span>
-              <select className="field__control" value={sizeCm} onChange={(e) => setSizeCm(Number(e.target.value))}>
+              <select className="field__control" name="size_cm" value={sizeCm} onChange={(e) => setSizeCm(Number(e.target.value))}>
                 {PRODUCT_SIZES_CM[product].map((v) => (
                   <option key={v} value={v}>
                     {v}
@@ -1816,6 +1884,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                 <span className="field__label">Сторона коробки</span>
                 <select
                   className="field__control"
+                  name="box_side"
                   value={boxSide}
                   onChange={(e) => {
                     const nextSide = e.target.value as BoxSide;
@@ -1868,6 +1937,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
               <span className="field__label">Текст (до {MAX_LINES} строк / {MAX_CHARS} символов)</span>
               <textarea
                 className="field__control"
+                name="text"
                 rows={5}
                 value={text}
                 onChange={(e) => setText(sanitizeText(e.target.value))}
@@ -1878,7 +1948,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             <div className="grid inscription__grid">
               <label className="field">
                 <span className="field__label">Шрифт (предпросмотр)</span>
-                <select className="field__control" value={fontPresetId} onChange={(e) => setFontPresetId(e.target.value)}>
+                <select className="field__control" name="font" value={fontPresetId} onChange={(e) => setFontPresetId(e.target.value)}>
                   {fontOptions.map((font) => (
                     <option key={font.id} value={font.id}>
                       {font.label}
@@ -1890,7 +1960,13 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
               <label className="field">
                 <span className="field__label">Загрузить TTF/OTF (для “кривых”)</span>
-                <input className="field__control" type="file" accept=".ttf,.otf" onChange={(e) => onUploadFont(e.target.files?.[0] ?? null)} />
+                <input
+                  className="field__control"
+                  name="font_file"
+                  type="file"
+                  accept=".ttf,.otf"
+                  onChange={(e) => onUploadFont(e.target.files?.[0] ?? null)}
+                />
               </label>
             </div>
 
@@ -1912,6 +1988,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                 <span className="field__label">Размер шрифта</span>
                 <input
                   className="field__control"
+                  name="font_size"
                   type="range"
                   min={16}
                   max={140}
@@ -1925,6 +2002,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                 <span className="field__label">Межстрочный интервал</span>
                 <input
                   className="field__control"
+                  name="line_height"
                   type="range"
                   min={0.9}
                   max={2}
@@ -1941,6 +2019,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                 <span className="field__label">Трекинг</span>
                 <input
                   className="field__control"
+                  name="tracking"
                   type="range"
                   min={-2}
                   max={10}
@@ -1980,7 +2059,12 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                     Вписать в зону
                   </Button>
                   <label className="toggle">
-                    <input type="checkbox" checked={showSafeZone} onChange={(e) => setShowSafeZone(e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      name="show_safe_zone"
+                      checked={showSafeZone}
+                      onChange={(e) => setShowSafeZone(e.target.checked)}
+                    />
                     <span>Показать зону</span>
                   </label>
                 </div>
@@ -1989,7 +2073,13 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
             <label className="field" style={{ marginTop: 12 }}>
               <span className="field__label">Импорт ранее сохранённого JSON</span>
-              <input className="field__control" type="file" accept=".json" onChange={(e) => importStateJson(e.target.files?.[0] ?? null)} />
+              <input
+                className="field__control"
+                name="import_json"
+                type="file"
+                accept=".json"
+                onChange={(e) => importStateJson(e.target.files?.[0] ?? null)}
+              />
             </label>
           </div>
         </div>
@@ -2038,13 +2128,22 @@ function measureLineWidth(font: OpenTypeFont, line: string, scale: number, lette
   return glyphs.length ? w - letterSpacingPx : 0;
 }
 
+type Polyline = { points: V[]; closed: boolean };
+type DxfPathGroup = { d: string; layer: string };
+
 // --- DXF export ---
 // Very small DXF writer: converts SVG path commands to LWPOLYLINE by flattening curves.
 // It is “best-effort”: Silhouette Studio usually imports DXF, but may require manual scaling.
-function svgPathToDxf(pathD: string, mmPerPx: number): string {
-  const subpaths = flattenPathToPolylines(pathD, 18).map((pts) =>
-    pts.map((p) => ({ x: p.x * mmPerPx, y: p.y * mmPerPx }))
-  );
+function pathsToDxf(groups: DxfPathGroup[], mmPerPx: number): string {
+  const segments = groups
+    .filter((group) => group.d.trim().length > 0)
+    .flatMap((group) =>
+      flattenPathToPolylines(group.d, 18).map((poly) => ({
+        layer: group.layer,
+        closed: poly.closed,
+        points: poly.points.map((p) => ({ x: p.x * mmPerPx, y: p.y * mmPerPx }))
+      }))
+    );
 
   const lines: string[] = [];
   lines.push('0', 'SECTION', '2', 'HEADER');
@@ -2055,13 +2154,13 @@ function svgPathToDxf(pathD: string, mmPerPx: number): string {
   lines.push('0', 'SECTION', '2', 'TABLES', '0', 'ENDSEC');
   lines.push('0', 'SECTION', '2', 'ENTITIES');
 
-  for (const pts of subpaths) {
-    if (pts.length < 2) continue;
+  for (const seg of segments) {
+    if (seg.points.length < 2) continue;
     lines.push('0', 'LWPOLYLINE');
-    lines.push('8', 'CUT'); // layer
-    lines.push('90', String(pts.length));
-    lines.push('70', '1'); // closed
-    for (const p of pts) {
+    lines.push('8', seg.layer); // layer
+    lines.push('90', String(seg.points.length));
+    lines.push('70', seg.closed ? '1' : '0');
+    for (const p of seg.points) {
       lines.push('10', p.x.toFixed(3));
       lines.push('20', (-p.y).toFixed(3)); // invert Y to match CAD coords
     }
@@ -2074,7 +2173,7 @@ function svgPathToDxf(pathD: string, mmPerPx: number): string {
 
 type V = { x: number; y: number };
 
-function flattenPathToPolylines(d: string, curveSegments: number): V[][] {
+function flattenPathToPolylines(d: string, curveSegments: number): Polyline[] {
   const tokens = d
     .replace(/,/g, ' ')
     .replace(/\s+/g, ' ')
@@ -2089,14 +2188,16 @@ function flattenPathToPolylines(d: string, curveSegments: number): V[][] {
   let cy = 0;
   let sx = 0;
   let sy = 0;
-  const result: V[][] = [];
+  const result: Polyline[] = [];
   let current: V[] = [];
+  let currentClosed = false;
 
   const nextNumber = () => Number(tokens[i++]);
 
-  const flush = () => {
-    if (current.length) result.push(current);
+  const flush = (closed = false) => {
+    if (current.length) result.push({ points: current, closed });
     current = [];
+    currentClosed = false;
   };
 
   while (i < tokens.length) {
@@ -2105,8 +2206,8 @@ function flattenPathToPolylines(d: string, curveSegments: number): V[][] {
       cmd = t;
       if (cmd === 'Z' || cmd === 'z') {
         if (current.length) {
-          current.push({ x: sx, y: sy });
-          flush();
+          currentClosed = true;
+          flush(true);
         }
       }
       continue;
@@ -2120,7 +2221,7 @@ function flattenPathToPolylines(d: string, curveSegments: number): V[][] {
       cy = cmd === 'm' ? cy + y : y;
       sx = cx;
       sy = cy;
-      flush();
+      flush(currentClosed);
       current.push({ x: cx, y: cy });
       cmd = cmd === 'm' ? 'l' : 'L'; // implicit lineto for subsequent pairs
       continue;
