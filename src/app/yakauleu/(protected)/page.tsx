@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { ColorPickerField } from '@/components/ColorPickerField';
 import { getCategories, getCategoryImages, getColors, getExports, getFonts } from '@/lib/data';
 
@@ -164,7 +165,7 @@ export default async function AdminPage({ searchParams }: Props) {
                     </div>
                     {category.heroImage ? (
                       <div className="adminHeroPreview">
-                        <img src={category.heroImage} alt="" width={160} height={120} />
+                        <Image src={category.heroImage} alt="" width={160} height={120} sizes="160px" />
                         <div className="muted" style={{ fontSize: 12 }}>
                           {category.heroImage}
                         </div>
@@ -215,11 +216,12 @@ export default async function AdminPage({ searchParams }: Props) {
                           <input type="hidden" name="id" value={image.id} />
                           <input type="hidden" name="tab" value="categories" />
                           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                            <img
+                            <Image
                               src={image.url}
                               alt=""
                               width={80}
                               height={80}
+                              sizes="80px"
                               style={{ objectFit: 'cover', borderRadius: 12, border: '1px solid rgba(0,0,0,0.08)' }}
                             />
                             <div>

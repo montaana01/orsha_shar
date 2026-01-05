@@ -34,7 +34,7 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
     if (!colors.trim()) missing.push('Цвета');
     if (!budget.trim()) missing.push('Бюджет');
     return { missing, ready: missing.length === 0 };
-  }, [budget, colors, date, location, timeExact, timeFrom, timeMode, timeTo]);
+  }, [budget, colors, date, location, occasion, timeExact, timeFrom, timeMode, timeTo]);
 
   const typeLabel = useMemo(() => {
     if (type === 'other') return 'Другое';

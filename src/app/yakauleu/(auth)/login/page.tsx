@@ -4,10 +4,11 @@ export const metadata = {
   title: 'Вход в админку'
 };
 
-type Props = { searchParams?: { error?: string } };
+type Props = { searchParams?: Promise<{ error?: string }> };
 
-export default function AdminLoginPage({ searchParams }: Props) {
-  const hasError = searchParams?.error === '1';
+export default async function AdminLoginPage({ searchParams }: Props) {
+  const params = (await searchParams) ?? {};
+  const hasError = params.error === '1';
   return (
     <div className="section">
       <div className="panel" style={{ maxWidth: 520, margin: '0 auto' }}>

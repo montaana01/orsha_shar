@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   COLOR_PRESETS,
   DEFAULT_COVERAGE_FACTOR,
@@ -93,7 +94,32 @@ type LoadedFont = {
   name: string;
   fileName: string;
   arrayBuffer: ArrayBuffer;
-  font: any;
+  font: OpenTypeFont;
+};
+
+type OpenTypePathCommand =
+  | { type: 'M'; x: number; y: number }
+  | { type: 'L'; x: number; y: number }
+  | { type: 'C'; x1: number; y1: number; x2: number; y2: number; x: number; y: number }
+  | { type: 'Q'; x1: number; y1: number; x: number; y: number }
+  | { type: 'Z' };
+
+type OpenTypePath = {
+  commands: OpenTypePathCommand[];
+};
+
+type OpenTypeGlyph = {
+  advanceWidth?: number;
+  getPath: (x: number, y: number, fontSize: number) => OpenTypePath;
+};
+
+type OpenTypeFont = {
+  unitsPerEm?: number;
+  ascender?: number;
+  descender?: number;
+  names?: { fullName?: { en?: string } };
+  charToGlyph?: (char: string) => (OpenTypeGlyph & { index?: number }) | null;
+  stringToGlyphs?: (text: string) => OpenTypeGlyph[];
 };
 
 function sanitizeText(input: string) {
@@ -176,7 +202,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       css: font.css,
       fileUrl: font.fileUrl,
       fileName: font.fileName,
-      source: 'fallback'
+      source: 'fallback' as const
     }));
     const dbFonts = fonts.map((font) => ({
       id: String(font.id),
@@ -184,7 +210,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       css: `'${font.name.replace(/'/g, "\\'")}', system-ui, -apple-system, Segoe UI, Roboto, Arial`,
       fileUrl: font.fileUrl,
       fileName: font.fileName,
-      source: 'db'
+      source: 'db' as const
     }));
 
     const merged = [...fallbackFonts, ...dbFonts];
@@ -281,7 +307,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   const material = MATERIALS[0];
 
   const activeViewKey = product === 'box' ? boxSide : 'main';
-  const activeViewLayers = layersByView[activeViewKey] ?? [];
+  const activeViewLayers = useMemo(() => layersByView[activeViewKey] ?? [], [activeViewKey, layersByView]);
   const activeLayerId = activeLayerIdByView[activeViewKey] ?? activeViewLayers[0]?.id ?? '';
 
   const activeLayerSnapshot = useMemo<TextLayer>(
@@ -429,10 +455,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     return Array.from(ids);
   }, [layersByViewSnapshot]);
 
-  const activeFontData = useMemo(() => {
-    if (fontPresetId === 'uploaded') return loadedFont;
-    return fontCacheRef.current.get(fontPresetId) ?? null;
-  }, [fontCacheVersion, fontPresetId, loadedFont]);
+  const activeFontData =
+    fontPresetId === 'uploaded' ? loadedFont : fontCacheRef.current.get(fontPresetId) ?? null;
 
   useEffect(() => {
     if (!fontOptions.length) return;
@@ -573,8 +597,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
           if (!res.ok) throw new Error('Failed to fetch font');
           const buf = await res.arrayBuffer();
           const opentype = (await import('opentype.js')).default;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const parsed: any = opentype.parse(buf);
+          const parsed = opentype.parse(buf) as OpenTypeFont;
           if (cancelled) return;
           fontCacheRef.current.set(id, {
             name: font.label,
@@ -656,31 +679,27 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   const getFontForLayer = useCallback(
     (layer: TextLayer) => {
       if (layer.fontPresetId === 'uploaded') return loadedFont;
+      if (fontCacheVersion === 0) return null;
       return fontCacheRef.current.get(layer.fontPresetId) ?? null;
     },
-    [loadedFont, fontCacheVersion]
+    [fontCacheVersion, loadedFont]
   );
 
-  const layerCoverage = useMemo(() => {
-    const result = new Map<string, number>();
-    for (const layer of activeLayersSnapshot) {
-      const fontData = getFontForLayer(layer);
-      result.set(layer.id, estimateCoverageFromFont(layer.text, fontData?.font));
-    }
-    return result;
-  }, [activeLayersSnapshot, getFontForLayer]);
+  const layerCoverage = new Map<string, number>();
+  for (const layer of activeLayersSnapshot) {
+    const fontData = getFontForLayer(layer);
+    layerCoverage.set(layer.id, estimateCoverageFromFont(layer.text, fontData?.font));
+  }
 
-  const areaCm2 = useMemo(() => {
-    let sum = 0;
-    for (const layer of activeLayersSnapshot) {
-      const metrics = layerMetrics[layer.id];
-      if (!metrics) continue;
-      const layerArea = (metrics.w / pxPerCm) * (metrics.h / pxPerCm);
-      const coverage = layerCoverage.get(layer.id) ?? DEFAULT_COVERAGE_FACTOR;
-      sum += layerArea * coverage;
-    }
-    return Math.max(0, sum);
-  }, [activeLayersSnapshot, layerCoverage, layerMetrics, pxPerCm]);
+  let areaCm2 = 0;
+  for (const layer of activeLayersSnapshot) {
+    const metrics = layerMetrics[layer.id];
+    if (!metrics) continue;
+    const layerArea = (metrics.w / pxPerCm) * (metrics.h / pxPerCm);
+    const coverage = layerCoverage.get(layer.id) ?? DEFAULT_COVERAGE_FACTOR;
+    areaCm2 += layerArea * coverage;
+  }
+  areaCm2 = Math.max(0, areaCm2);
 
   const weightG = areaCm2 * material.gPerCm2;
 
@@ -764,11 +783,10 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     [isInsideSafe, shape.cx, shape.cy]
   );
 
-  // Ensure current pos stays valid when product/size/font changes
+  // Ensure current pos stays valid when geometry changes
   useEffect(() => {
     setPos((p) => constrainToSafe(p));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product, sizeCm, fontCss, fontSizePx, lineHeightMult, letterSpacing, text]);
+  }, [constrainToSafe]);
 
   // Dragging
   const drag = useRef<{
@@ -949,8 +967,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     if (!file) return;
     const buf = await file.arrayBuffer();
     const opentype = (await import('opentype.js')).default;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const font: any = opentype.parse(buf);
+    const font = opentype.parse(buf) as OpenTypeFont;
 
     const name = (font?.names?.fullName?.en as string) || file.name.replace(/\.(ttf|otf)$/i, '') || 'UserFont';
 
@@ -1117,9 +1134,14 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   const importStateJson = async (file: File | null) => {
     if (!file) return;
     const text = await file.text();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parsed: any = JSON.parse(text);
-    const s: EditorState = parsed?.state;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch {
+      return;
+    }
+    if (!parsed || typeof parsed !== 'object' || !('state' in parsed)) return;
+    const s = (parsed as { state?: EditorState }).state;
     if (!s) return;
 
     setProduct(s.product);
@@ -1206,8 +1228,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
   const buildTextPathD = useCallback(
     (layer: TextLayer, fontData: LoadedFont) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const font: any = fontData.font;
+      const font = fontData.font;
       const unitsPerEm = font.unitsPerEm || 1000;
       const scale = layer.fontSizePx / unitsPerEm;
       const asc = (font.ascender || unitsPerEm * 0.8) * scale;
@@ -1232,11 +1253,10 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         const yBaseline = yCenter + baselineCenterOffset;
 
         let x = xStart;
-        const glyphs = font.stringToGlyphs(line);
+        const glyphs = font.stringToGlyphs ? font.stringToGlyphs(line) : [];
         for (const g of glyphs) {
           const adv = (g.advanceWidth || unitsPerEm * 0.5) * scale;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const p: any = g.getPath(x, yBaseline, layer.fontSizePx);
+          const p = g.getPath(x, yBaseline, layer.fontSizePx);
           paths.push(pathToD(p));
           x += adv + layer.letterSpacing;
         }
@@ -1441,7 +1461,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
               </div>
             </form>
             <p className="muted" style={{ marginTop: 10 }}>
-              Подробности — в <a href="/privacy">политике конфиденциальности</a>.
+              Подробности — в <Link href="/privacy">политике конфиденциальности</Link>.
             </p>
           </div>
         </div>
@@ -1888,24 +1908,30 @@ function arrayBufferToBase64(buf: ArrayBuffer): string {
   return btoa(binary);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function pathToD(path: any): string {
+function pathToD(path: OpenTypePath | null | undefined): string {
   if (!path || !path.commands) return '';
   return path.commands
-    .map((c: any) => {
-      if (c.type === 'M') return `M ${c.x} ${c.y}`;
-      if (c.type === 'L') return `L ${c.x} ${c.y}`;
-      if (c.type === 'C') return `C ${c.x1} ${c.y1} ${c.x2} ${c.y2} ${c.x} ${c.y}`;
-      if (c.type === 'Q') return `Q ${c.x1} ${c.y1} ${c.x} ${c.y}`;
-      if (c.type === 'Z') return 'Z';
-      return '';
+    .map((c) => {
+      switch (c.type) {
+        case 'M':
+          return `M ${c.x} ${c.y}`;
+        case 'L':
+          return `L ${c.x} ${c.y}`;
+        case 'C':
+          return `C ${c.x1} ${c.y1} ${c.x2} ${c.y2} ${c.x} ${c.y}`;
+        case 'Q':
+          return `Q ${c.x1} ${c.y1} ${c.x} ${c.y}`;
+        case 'Z':
+          return 'Z';
+        default:
+          return '';
+      }
     })
     .join(' ');
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function measureLineWidth(font: any, line: string, scale: number, letterSpacingPx: number): number {
-  const glyphs = font.stringToGlyphs(line);
+function measureLineWidth(font: OpenTypeFont, line: string, scale: number, letterSpacingPx: number): number {
+  const glyphs = font.stringToGlyphs ? font.stringToGlyphs(line) : [];
   let w = 0;
   for (const g of glyphs) {
     const adv = (g.advanceWidth || 500) * scale;

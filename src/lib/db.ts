@@ -2,7 +2,12 @@ import mysql from 'mysql2/promise';
 
 type Pool = mysql.Pool;
 
-let pool: Pool | null = null;
+type GlobalWithPool = typeof globalThis & {
+  mysqlPool?: Pool;
+};
+
+const globalWithPool = globalThis as GlobalWithPool;
+let pool: Pool | null = globalWithPool.mysqlPool ?? null;
 
 function getPool(): Pool {
   if (pool) return pool;
@@ -14,17 +19,29 @@ function getPool(): Pool {
     throw new Error('Missing MySQL env vars: MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE');
   }
 
+  const rawLimit = Number(process.env.MYSQL_CONNECTION_LIMIT || '2');
+  const connectionLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.trunc(rawLimit) : 2;
+  const rawMaxIdle = Number(process.env.MYSQL_MAX_IDLE || '');
+  const maxIdle =
+    Number.isFinite(rawMaxIdle) && rawMaxIdle > 0 ? Math.min(Math.trunc(rawMaxIdle), connectionLimit) : Math.min(2, connectionLimit);
+  const rawIdleTimeout = Number(process.env.MYSQL_IDLE_TIMEOUT || '60000');
+  const idleTimeout = Number.isFinite(rawIdleTimeout) && rawIdleTimeout > 0 ? Math.trunc(rawIdleTimeout) : 60000;
+
   pool = mysql.createPool({
     host,
     user,
     password,
     database,
     port: Number(process.env.MYSQL_PORT || '3306'),
-    connectionLimit: 10,
+    connectionLimit,
+    maxIdle,
+    idleTimeout,
     waitForConnections: true,
+    queueLimit: 0,
     timezone: '+00:00'
   });
 
+  globalWithPool.mysqlPool = pool;
   return pool;
 }
 
