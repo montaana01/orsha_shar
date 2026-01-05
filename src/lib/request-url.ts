@@ -29,16 +29,14 @@ export function getRequestOrigin(request: Request): string {
     (host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('0.0.0.0') ? 'http' : 'https');
 
   const local = host ? isLocalHost(host) : false;
-  const isProd = process.env.NODE_ENV === 'production';
   const siteUrl = new URL(site.url);
   const siteHost = siteUrl.hostname;
   if (host) {
     const parsed = parseHost(host);
     const hasOddPort = parsed.port !== null && parsed.port !== '' && parsed.port !== '443' && parsed.port !== '80';
     const hostMismatch = parsed.hostname !== siteHost;
-    if (isProd && (local || hostMismatch || hasOddPort)) {
-      return site.url;
-    }
+    if (local) return `${proto}://${host}`;
+    if (hostMismatch || hasOddPort) return site.url;
     return `${proto}://${host}`;
   }
   return site.url;
