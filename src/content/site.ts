@@ -11,7 +11,6 @@ export const site = {
   },
   socials: {
     instagram: 'https://instagram.com/orsha_shar',
-    // Direct message deep-link (opens dialog in Instagram where possible)
     instagramDm: 'https://ig.me/m/orsha_shar',
     vk: 'https://vk.com/orsha_shar',
     ok: 'https://ok.ru/orsha_shar',

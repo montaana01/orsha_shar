@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { execute, query } from '@/lib/db';
 import { ensureDir, formatGalleryFileName, isAllowedExtension, writeFileSafe } from '@/lib/files';
 import { requireAdminRequest, unauthorized } from '@/lib/admin-guard';
+import { buildRedirectUrl } from '@/lib/request-url';
 import { isSafeFileSize, normalizeSlug, parsePositiveInt } from '@/lib/validation';
 
 export const runtime = 'nodejs';
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
   const files = form.getAll('files').filter(Boolean) as File[];
 
   if (!categoryId || !files.length) {
-    return NextResponse.redirect(new URL('/yakauleu?error=images', request.url), 303);
+    return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu?error=images'), 303);
   }
 
   const categoryRows = await query<{ slug: string }>(
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
   );
   const slug = normalizeSlug(categoryRows[0]?.slug ?? '');
   if (!slug) {
-    return NextResponse.redirect(new URL('/yakauleu?error=images', request.url), 303);
+    return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu?error=images'), 303);
   }
 
   const dir = path.join(process.cwd(), 'public', 'gallery', slug);
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (invalid || !accepted.length) {
-    return NextResponse.redirect(new URL('/yakauleu?error=images', request.url), 303);
+    return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu?error=images'), 303);
   }
 
   for (const file of accepted) {
@@ -67,5 +68,5 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.redirect(new URL('/yakauleu', request.url), 303);
+  return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu'), 303);
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { buildAdminSessionCookie, createAdminSession, findAdminByEmail, verifyPassword } from '@/lib/admin-auth';
+import { buildRedirectUrl } from '@/lib/request-url';
 
 export const runtime = 'nodejs';
 
@@ -12,16 +13,16 @@ export async function POST(request: Request) {
   const passwordOk = password.length > 0 && password.length <= 128;
 
   if (!emailOk || !passwordOk) {
-    return NextResponse.redirect(new URL('/yakauleu/login?error=1', request.url), 303);
+    return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu/login?error=1'), 303);
   }
 
   const admin = await findAdminByEmail(email);
   if (!admin || !admin.is_active || !verifyPassword(password, admin.password_hash)) {
-    return NextResponse.redirect(new URL('/yakauleu/login?error=1', request.url), 303);
+    return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu/login?error=1'), 303);
   }
 
   const { token, expiresAt } = await createAdminSession(admin.id);
-  const res = NextResponse.redirect(new URL('/yakauleu', request.url), 303);
+  const res = NextResponse.redirect(buildRedirectUrl(request, '/yakauleu'), 303);
   const cookie = buildAdminSessionCookie(token, expiresAt);
   res.cookies.set(cookie);
   return res;

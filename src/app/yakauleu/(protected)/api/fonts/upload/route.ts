@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { execute } from '@/lib/db';
 import { ensureDir, isAllowedExtension, withRandomPrefix, writeFileSafe } from '@/lib/files';
 import { requireAdminRequest, unauthorized } from '@/lib/admin-guard';
+import { buildRedirectUrl } from '@/lib/request-url';
 import { isSafeFileSize, parseNonNegativeInt, requireText } from '@/lib/validation';
 
 export const runtime = 'nodejs';
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
   const file = form.get('file') as File | null;
 
   if (!name || !file) {
-    const url = new URL('/yakauleu', request.url);
+    const url = buildRedirectUrl(request, '/yakauleu');
     if (tab) url.searchParams.set('tab', tab);
     url.searchParams.set('error', 'fonts');
     return NextResponse.redirect(url, 303);
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   const original = file.name || 'font';
   if (!isAllowedExtension(original, ALLOWED_EXTS) || !isSafeFileSize(file.size, MAX_FONT_BYTES)) {
-    const url = new URL('/yakauleu', request.url);
+    const url = buildRedirectUrl(request, '/yakauleu');
     if (tab) url.searchParams.set('tab', tab);
     url.searchParams.set('error', 'fonts');
     return NextResponse.redirect(url, 303);
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     position
   ]);
 
-  const url = new URL('/yakauleu', request.url);
+  const url = buildRedirectUrl(request, '/yakauleu');
   if (tab) url.searchParams.set('tab', tab);
   return NextResponse.redirect(url, 303);
 }

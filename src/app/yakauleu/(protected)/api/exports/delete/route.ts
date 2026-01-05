@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { execute, query } from '@/lib/db';
 import { requireAdminRequest, unauthorized } from '@/lib/admin-guard';
 import { archivePath } from '@/lib/files';
+import { buildRedirectUrl } from '@/lib/request-url';
 import { parsePositiveInt } from '@/lib/validation';
 
 export const runtime = 'nodejs';
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
   const id = parsePositiveInt(form.get('id'));
 
   if (!id) {
-    const url = new URL('/yakauleu', request.url);
+    const url = buildRedirectUrl(request, '/yakauleu');
     if (tab) url.searchParams.set('tab', tab);
     url.searchParams.set('error', 'exports');
     return NextResponse.redirect(url, 303);
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
   );
   const exp = rows[0];
   if (!exp) {
-    const url = new URL('/yakauleu', request.url);
+    const url = buildRedirectUrl(request, '/yakauleu');
     if (tab) url.searchParams.set('tab', tab);
     url.searchParams.set('error', 'exports');
     return NextResponse.redirect(url, 303);
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
     await archivePath(storageDir, path.join('exports', exp.dxf_path));
   }
 
-  const url = new URL('/yakauleu', request.url);
+  const url = buildRedirectUrl(request, '/yakauleu');
   if (tab) url.searchParams.set('tab', tab);
   return NextResponse.redirect(url, 303);
 }

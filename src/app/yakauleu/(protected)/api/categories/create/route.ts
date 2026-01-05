@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { execute } from '@/lib/db';
 import { ensureDir, isAllowedExtension, withRandomPrefix, writeFileSafe } from '@/lib/files';
 import { requireAdminRequest, unauthorized } from '@/lib/admin-guard';
+import { buildRedirectUrl } from '@/lib/request-url';
 import { isSafeFileSize, normalizeSlug, optionalText, parseNonNegativeInt, requireText } from '@/lib/validation';
 
 export const runtime = 'nodejs';
@@ -20,14 +21,14 @@ export async function POST(request: NextRequest) {
   const position = parseNonNegativeInt(form.get('position'), 9999);
 
   if (!title || !slug || description === null || !heroFile) {
-    return NextResponse.redirect(new URL('/yakauleu?error=category', request.url), 303);
+    return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu?error=category'), 303);
   }
 
   const original = heroFile.name || 'hero';
   const allowed = isAllowedExtension(original, ['.jpg', '.jpeg', '.png', '.webp', '.gif']);
   const sized = isSafeFileSize(heroFile.size, 8 * 1024 * 1024);
   if (!allowed || !sized) {
-    return NextResponse.redirect(new URL('/yakauleu?error=category', request.url), 303);
+    return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu?error=category'), 303);
   }
 
   const dir = path.join(process.cwd(), 'public', 'gallery', slug);
@@ -41,5 +42,5 @@ export async function POST(request: NextRequest) {
     [slug, title, description, heroImage, visible, position]
   );
 
-  return NextResponse.redirect(new URL('/yakauleu', request.url), 303);
+  return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu'), 303);
 }

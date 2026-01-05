@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { execute, query } from '@/lib/db';
 import { requireAdminRequest, unauthorized } from '@/lib/admin-guard';
 import { archivePath } from '@/lib/files';
+import { buildRedirectUrl } from '@/lib/request-url';
 
 export const runtime = 'nodejs';
 
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
   const id = Number(form.get('id') ?? 0);
 
   if (!id) {
-    const url = new URL('/yakauleu', request.url);
+    const url = buildRedirectUrl(request, '/yakauleu');
     if (tab) url.searchParams.set('tab', tab);
     url.searchParams.set('error', 'images');
     return NextResponse.redirect(url, 303);
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
   );
   const row = rows[0];
   if (!row) {
-    const url = new URL('/yakauleu', request.url);
+    const url = buildRedirectUrl(request, '/yakauleu');
     if (tab) url.searchParams.set('tab', tab);
     url.searchParams.set('error', 'images');
     return NextResponse.redirect(url, 303);
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
   const publicDir = path.resolve(process.cwd(), 'public');
   await archivePath(publicDir, path.join('gallery', row.slug, row.file_name));
 
-  const url = new URL('/yakauleu', request.url);
+  const url = buildRedirectUrl(request, '/yakauleu');
   if (tab) url.searchParams.set('tab', tab);
   return NextResponse.redirect(url, 303);
 }

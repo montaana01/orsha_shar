@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { execute, query } from '@/lib/db';
 import { ensureDir, isAllowedExtension, withRandomPrefix, writeFileSafe } from '@/lib/files';
 import { requireAdminRequest, unauthorized } from '@/lib/admin-guard';
+import { buildRedirectUrl } from '@/lib/request-url';
 import { isSafeFileSize, isSafePathSegment, normalizeSlug, optionalText, parseNonNegativeInt, parsePositiveInt, requireText } from '@/lib/validation';
 
 export const runtime = 'nodejs';
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
   const position = parseNonNegativeInt(form.get('position'), 9999);
 
   if (!id || !title || !slug || description === null) {
-    return NextResponse.redirect(new URL('/yakauleu?error=category', request.url), 303);
+    return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu?error=category'), 303);
   }
 
   const existing = await query<{ slug: string; hero_image: string }>(
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
   const prevSlug = existing[0]?.slug ?? '';
   let heroImage = existing[0]?.hero_image ?? '';
   if (!prevSlug) {
-    return NextResponse.redirect(new URL('/yakauleu?error=category', request.url), 303);
+    return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu?error=category'), 303);
   }
 
   if (prevSlug && prevSlug !== slug && isSafePathSegment(prevSlug)) {
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     const allowed = isAllowedExtension(original, ['.jpg', '.jpeg', '.png', '.webp', '.gif']);
     const sized = isSafeFileSize(heroFile.size, 8 * 1024 * 1024);
     if (!allowed || !sized) {
-      return NextResponse.redirect(new URL('/yakauleu?error=category', request.url), 303);
+      return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu?error=category'), 303);
     }
 
     const dir = path.join(process.cwd(), 'public', 'gallery', slug);
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!heroImage) {
-    return NextResponse.redirect(new URL('/yakauleu?error=category', request.url), 303);
+    return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu?error=category'), 303);
   }
 
   await execute(
@@ -74,5 +75,5 @@ export async function POST(request: NextRequest) {
     [slug, title, description, heroImage, visible, position, id]
   );
 
-  return NextResponse.redirect(new URL('/yakauleu', request.url), 303);
+  return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu'), 303);
 }
