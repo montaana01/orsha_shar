@@ -24,8 +24,12 @@ export const metadata: Metadata = {
   description:
     'Гелиевые шары, фотозоны, украшения для торжеств в Орше.',
   icons: {
-    icon: '/assets/orsha-shar.webp',
-    apple: '/assets/orsha-shar.webp'
+    icon: [
+      { url: '/favicon/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png' }
+    ],
+    apple: [{ url: '/favicon/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' }],
+    shortcut: '/favicon/web-app-manifest-192x192.png'
   },
   openGraph: {
     type: 'website',
@@ -41,6 +45,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="ru" data-scroll-behavior="smooth">
+      <head>
+        <meta name="apple-mobile-web-app-title" content="Орша Шар" />
+      </head>
       <body className="app">
         <Header categories={categories} />
         <main className="main">{children}</main>

@@ -16,6 +16,7 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
   const [timeFrom, setTimeFrom] = useState('');
   const [timeTo, setTimeTo] = useState('');
   const [location, setLocation] = useState('Орша');
+  const [contact, setContact] = useState('');
   const [budget, setBudget] = useState('');
   const [colors, setColors] = useState('');
   const [notes, setNotes] = useState('');
@@ -31,10 +32,11 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
       if (!timeTo) missing.push('Время: до');
     }
     if (!location.trim()) missing.push('Адрес');
+    if (!contact.trim()) missing.push('Контакт');
     if (!colors.trim()) missing.push('Цвета');
     if (!budget.trim()) missing.push('Бюджет');
     return { missing, ready: missing.length === 0 };
-  }, [budget, colors, date, location, occasion, timeExact, timeFrom, timeMode, timeTo]);
+  }, [budget, colors, contact, date, location, occasion, timeExact, timeFrom, timeMode, timeTo]);
 
   const typeLabel = useMemo(() => {
     if (type === 'other') return 'Другое';
@@ -70,10 +72,10 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
     if (location) lines.push(`Адрес/локация: ${location}`);
     if (colors) lines.push(`Цвета/стиль: ${colors}`);
     if (budget) lines.push(`Бюджет: ${budget}`);
+    if (contact) lines.push(`Контакт: ${contact}`);
     if (notes) lines.push(`Комментарий: ${notes}`);
-    lines.push('Контакт для связи: (укажите ваш телефон/ник)');
     return lines.join('\n');
-  }, [typeLabel, occasion, formattedDate, timeLabel, location, colors, budget, notes]);
+  }, [typeLabel, occasion, formattedDate, timeLabel, location, colors, budget, contact, notes]);
 
   const telegramShare = useMemo(() => {
     const base = 'https://t.me/orshashar';
@@ -207,6 +209,17 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
               value={location}
               onChange={(event) => setLocation(event.target.value)}
               placeholder="Орша, ..."
+              required
+            />
+          </label>
+
+          <label className="field">
+            <span className="field__label">Контакт для связи</span>
+            <input
+              className="field__control"
+              value={contact}
+              onChange={(event) => setContact(event.target.value)}
+              placeholder="Телефон, @ник или ссылка на соцсеть"
               required
             />
           </label>
