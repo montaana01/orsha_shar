@@ -1,6 +1,18 @@
 import Image from 'next/image';
 import { ColorPickerField } from '@/components/ColorPickerField';
-import { getCategories, getCategoryImages, getColors, getExports, getFonts } from '@/lib/data';
+import { PRODUCT_LABEL } from '@/content/inscription';
+import {
+  getCategories,
+  getCategoryImages,
+  getColors,
+  getDeletedCategories,
+  getDeletedCategoryImages,
+  getDeletedColors,
+  getDeletedExports,
+  getDeletedFonts,
+  getExports,
+  getFonts
+} from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -11,8 +23,41 @@ const TABS = [
   { id: 'categories', label: 'Категории' },
   { id: 'fonts', label: 'Шрифты' },
   { id: 'colors', label: 'Цвета' },
-  { id: 'exports', label: 'Экспорты' }
+  { id: 'exports', label: 'Экспорты' },
+  { id: 'archive', label: 'Архив' }
 ] as const;
+
+type ExportDetails = {
+  clientName?: string;
+  clientContact?: string;
+  product?: string;
+  sizeCm?: number;
+  views?: Array<{
+    id?: string;
+    label?: string;
+    layers?: Array<{
+      id?: string;
+      name?: string;
+      text?: string;
+      fontName?: string;
+      fontSizePx?: number;
+      lineHeightMult?: number;
+      letterSpacing?: number;
+      color?: string;
+      widthCm?: number | null;
+      heightCm?: number | null;
+    }>;
+  }>;
+};
+
+function parseExportDetails(raw: string): ExportDetails | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as ExportDetails;
+  } catch {
+    return null;
+  }
+}
 
 export default async function AdminPage({ searchParams }: Props) {
   const params = (await searchParams) ?? {};
@@ -22,6 +67,13 @@ export default async function AdminPage({ searchParams }: Props) {
     getFonts({ includeHidden: true }).catch(() => []),
     getColors({ includeHidden: true }).catch(() => []),
     getExports().catch(() => [])
+  ]);
+  const [deletedCategories, deletedImages, deletedFonts, deletedColors, deletedExports] = await Promise.all([
+    getDeletedCategories().catch(() => []),
+    getDeletedCategoryImages().catch(() => []),
+    getDeletedFonts().catch(() => []),
+    getDeletedColors().catch(() => []),
+    getDeletedExports().catch(() => [])
   ]);
 
   const categoriesWithImages = await Promise.all(
@@ -404,20 +456,42 @@ export default async function AdminPage({ searchParams }: Props) {
             <h2 className="panel__title">Экспорты (SVG/DXF)</h2>
             <div className="list">
               {exportsList.length ? (
-                exportsList.map((exp) => (
-                  <div key={exp.id} className="panel" style={{ display: 'grid', gap: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                      <div>
-                        <div style={{ fontSize: 14 }}>
-                          {exp.product} • {exp.sizeCm} см
-                        </div>
+                exportsList.map((exp) => {
+                  const details = parseExportDetails(exp.detailsJson);
+                  const clientName = exp.clientName || details?.clientName || '';
+                  const clientContact = exp.clientContact || details?.clientContact || '';
+                  const productLabel =
+                    PRODUCT_LABEL[exp.product as keyof typeof PRODUCT_LABEL] ?? exp.product;
+                  const orderLabel =
+                    clientName || clientContact
+                      ? [clientName, clientContact].filter(Boolean).join(' • ')
+                      : 'Без контакта';
+                  const views = details?.views ?? [];
+
+                  return (
+                    <details key={exp.id} className="panel" style={{ background: 'transparent' }}>
+                      <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                        {productLabel} • {exp.sizeCm} см <span className="muted">({orderLabel})</span>
+                      </summary>
+
+                      <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
                         <div className="muted" style={{ fontSize: 12 }}>
-                          Сессия: {exp.sessionId} • ID: {exp.projectHash}
+                          {new Date(exp.createdAt).toLocaleString('ru-RU')}
                         </div>
-                        <div className="muted" style={{ fontSize: 12 }}>
-                          Шрифт: {exp.fontName} • Цвет: {exp.color}
+                        <div style={{ display: 'grid', gap: 4, fontSize: 14 }}>
+                          <div>
+                            Фигура: {productLabel} • {exp.sizeCm} см
+                          </div>
+                          <div>Клиент: {clientName || '—'}</div>
+                          <div>Контакт: {clientContact || '—'}</div>
+                          <div>
+                            Шрифт: {exp.fontName} • Цвет: {exp.color}
+                          </div>
+                          <div className="muted" style={{ fontSize: 12 }}>
+                            Сессия: {exp.sessionId} • ID: {exp.projectHash}
+                          </div>
                         </div>
-                      </div>
+
                         <div className="hero__actions" style={{ flexWrap: 'wrap' }}>
                           <a className="btn btn--secondary" href={`/yakauleu/exports/${exp.id}?type=svg`}>
                             SVG
@@ -433,15 +507,179 @@ export default async function AdminPage({ searchParams }: Props) {
                             </button>
                           </form>
                         </div>
-                    </div>
-                    <div className="muted" style={{ fontSize: 12 }}>
-                      {new Date(exp.createdAt).toLocaleString('ru-RU')}
-                    </div>
-                  </div>
-                ))
+
+                        {views.length ? (
+                          <div className="list">
+                            {views.map((view) => (
+                              <div key={view.id ?? view.label} className="panel" style={{ display: 'grid', gap: 8 }}>
+                                <div style={{ fontWeight: 600 }}>{view.label ?? view.id ?? 'Сторона'}</div>
+                                {view.layers?.length ? (
+                                  view.layers.map((layer) => (
+                                    <div key={layer.id ?? layer.name} style={{ display: 'grid', gap: 4 }}>
+                                      <div style={{ fontSize: 14 }}>{layer.name ?? 'Слой'}</div>
+                                      <div className="muted" style={{ fontSize: 12, whiteSpace: 'pre-wrap' }}>
+                                        {layer.text || '—'}
+                                      </div>
+                                      <div className="muted" style={{ fontSize: 12 }}>
+                                        {layer.fontName ? `Шрифт: ${layer.fontName}` : null}
+                                        {layer.fontSizePx ? ` • ${layer.fontSizePx}px` : ''}
+                                        {layer.letterSpacing ? ` • трекинг ${layer.letterSpacing}px` : ''}
+                                      </div>
+                                      <div className="muted" style={{ fontSize: 12 }}>
+                                        {layer.widthCm ? `Ширина: ${layer.widthCm} см` : 'Ширина: —'}
+                                        {layer.heightCm ? ` • Высота: ${layer.heightCm} см` : ''}
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="muted">Нет данных по слоям.</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="muted">Подробности надписи отсутствуют.</div>
+                        )}
+                      </div>
+                    </details>
+                  );
+                })
               ) : (
                 <div className="muted">Пока нет экспортов.</div>
               )}
+            </div>
+          </div>
+        ) : null}
+
+        {activeTab.id === 'archive' ? (
+          <div className="panel">
+            <h2 className="panel__title">Архив удалённых данных</h2>
+            <p className="muted">Удалённые элементы хранятся в базе с флагом и в папке `deleted`.</p>
+            <div className="list">
+              <details className="panel" style={{ background: 'transparent' }}>
+                <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                  Категории ({deletedCategories.length})
+                </summary>
+                <div className="list" style={{ marginTop: 12 }}>
+                  {deletedCategories.length ? (
+                    deletedCategories.map((category) => (
+                      <div key={category.id} className="panel" style={{ display: 'grid', gap: 6 }}>
+                        <div style={{ fontSize: 14 }}>
+                          {category.title} <span className="muted">({category.slug})</span>
+                        </div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          Удалено: {new Date(category.deletedAt).toLocaleString('ru-RU')}
+                        </div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          Архив: /deleted/gallery/{category.slug}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="muted">Удалённых категорий нет.</div>
+                  )}
+                </div>
+              </details>
+
+              <details className="panel" style={{ background: 'transparent' }}>
+                <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                  Фото категорий ({deletedImages.length})
+                </summary>
+                <div className="list" style={{ marginTop: 12 }}>
+                  {deletedImages.length ? (
+                    deletedImages.map((image) => (
+                      <div key={image.id} className="panel" style={{ display: 'grid', gap: 6 }}>
+                        <div style={{ fontSize: 14 }}>
+                          {image.fileName} <span className="muted">({image.categorySlug})</span>
+                        </div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          Удалено: {new Date(image.deletedAt).toLocaleString('ru-RU')}
+                        </div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          Архив: {image.url}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="muted">Удалённых фото нет.</div>
+                  )}
+                </div>
+              </details>
+
+              <details className="panel" style={{ background: 'transparent' }}>
+                <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                  Шрифты ({deletedFonts.length})
+                </summary>
+                <div className="list" style={{ marginTop: 12 }}>
+                  {deletedFonts.length ? (
+                    deletedFonts.map((font) => (
+                      <div key={font.id} className="panel" style={{ display: 'grid', gap: 6 }}>
+                        <div style={{ fontSize: 14 }}>{font.name}</div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          Файл: {font.fileName}
+                        </div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          Удалено: {new Date(font.deletedAt).toLocaleString('ru-RU')}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="muted">Удалённых шрифтов нет.</div>
+                  )}
+                </div>
+              </details>
+
+              <details className="panel" style={{ background: 'transparent' }}>
+                <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                  Цвета ({deletedColors.length})
+                </summary>
+                <div className="list" style={{ marginTop: 12 }}>
+                  {deletedColors.length ? (
+                    deletedColors.map((color) => (
+                      <div key={color.id} className="panel" style={{ display: 'grid', gap: 6 }}>
+                        <div style={{ fontSize: 14 }}>{color.name}</div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          {color.value}
+                        </div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          Удалено: {new Date(color.deletedAt).toLocaleString('ru-RU')}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="muted">Удалённых цветов нет.</div>
+                  )}
+                </div>
+              </details>
+
+              <details className="panel" style={{ background: 'transparent' }}>
+                <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                  Экспорты ({deletedExports.length})
+                </summary>
+                <div className="list" style={{ marginTop: 12 }}>
+                  {deletedExports.length ? (
+                    deletedExports.map((exp) => {
+                      const productLabel =
+                        PRODUCT_LABEL[exp.product as keyof typeof PRODUCT_LABEL] ?? exp.product;
+                      return (
+                        <div key={exp.id} className="panel" style={{ display: 'grid', gap: 6 }}>
+                          <div style={{ fontSize: 14 }}>
+                            {productLabel} • {exp.sizeCm} см
+                          </div>
+                          <div className="muted" style={{ fontSize: 12 }}>
+                            Удалено: {new Date(exp.deletedAt).toLocaleString('ru-RU')}
+                          </div>
+                          <div className="muted" style={{ fontSize: 12 }}>
+                            Клиент: {exp.clientName || '—'} • Контакт: {exp.clientContact || '—'}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="muted">Удалённых экспортов нет.</div>
+                  )}
+                </div>
+              </details>
             </div>
           </div>
         ) : null}

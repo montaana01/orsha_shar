@@ -20,6 +20,8 @@ import { getShape, pointInPolygon, type Point } from './shapes';
 import { Button } from '@/components/Button';
 
 const CANVAS_PX = 720;
+// Silhouette Studio often imports DXF at ~50% size, so we compensate here.
+const DXF_SCALE = 2;
 const BOX_SIDES = [
   { id: 'front', label: 'Передняя' },
   { id: 'right', label: 'Правая' },
@@ -31,6 +33,109 @@ type BoxSide = (typeof BOX_SIDES)[number]['id'];
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
+}
+
+const GLYPH_AREA_CACHE = new WeakMap<object, Map<string, number>>();
+const AREA_SEGMENTS = 8;
+
+function polygonArea(points: Point[]): number {
+  let area = 0;
+  for (let i = 0; i < points.length; i++) {
+    const j = (i + 1) % points.length;
+    area += points[i].x * points[j].y - points[j].x * points[i].y;
+  }
+  return area / 2;
+}
+
+function quadBezier(p0: Point, p1: Point, p2: Point, t: number): Point {
+  const mt = 1 - t;
+  const x = mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x;
+  const y = mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y;
+  return { x, y };
+}
+
+function cubicBezier(p0: Point, p1: Point, p2: Point, p3: Point, t: number): Point {
+  const mt = 1 - t;
+  const mt2 = mt * mt;
+  const t2 = t * t;
+  const x = p0.x * mt2 * mt + 3 * p1.x * mt2 * t + 3 * p2.x * mt * t2 + p3.x * t2 * t;
+  const y = p0.y * mt2 * mt + 3 * p1.y * mt2 * t + 3 * p2.y * mt * t2 + p3.y * t2 * t;
+  return { x, y };
+}
+
+function pathArea(commands: OpenTypePathCommand[]): number {
+  let sum = 0;
+  let current: Point[] = [];
+  let pen: Point | null = null;
+
+  const closeContour = () => {
+    if (current.length > 2) {
+      sum += polygonArea(current);
+    }
+    current = [];
+    pen = null;
+  };
+
+  for (const cmd of commands) {
+    switch (cmd.type) {
+      case 'M': {
+        if (current.length) closeContour();
+        const p = { x: cmd.x, y: cmd.y };
+        current = [p];
+        pen = p;
+        break;
+      }
+      case 'L': {
+        const p = { x: cmd.x, y: cmd.y };
+        current.push(p);
+        pen = p;
+        break;
+      }
+      case 'Q': {
+        if (!pen) break;
+        const p0 = pen;
+        const p1 = { x: cmd.x1, y: cmd.y1 };
+        const p2 = { x: cmd.x, y: cmd.y };
+        for (let i = 1; i <= AREA_SEGMENTS; i++) {
+          const t = i / AREA_SEGMENTS;
+          current.push(quadBezier(p0, p1, p2, t));
+        }
+        pen = p2;
+        break;
+      }
+      case 'C': {
+        if (!pen) break;
+        const p0 = pen;
+        const p1 = { x: cmd.x1, y: cmd.y1 };
+        const p2 = { x: cmd.x2, y: cmd.y2 };
+        const p3 = { x: cmd.x, y: cmd.y };
+        for (let i = 1; i <= AREA_SEGMENTS; i++) {
+          const t = i / AREA_SEGMENTS;
+          current.push(cubicBezier(p0, p1, p2, p3, t));
+        }
+        pen = p3;
+        break;
+      }
+      case 'Z':
+        closeContour();
+        break;
+      default:
+        break;
+    }
+  }
+
+  if (current.length > 2) {
+    sum += polygonArea(current);
+  }
+
+  return Math.abs(sum);
+}
+
+function estimateGlyphArea(glyph: { getPath?: (x: number, y: number, fontSize: number) => OpenTypePath }, unitsPerEm: number): number {
+  if (!glyph.getPath) return 0;
+  const path = glyph.getPath(0, 0, unitsPerEm);
+  if (!path?.commands?.length) return 0;
+  return pathArea(path.commands);
 }
 
 function escapeXml(s: string) {
@@ -134,25 +239,38 @@ function estimateCoverageFromFont(text: string, font: any): number {
   const stripped = sanitizeText(text).replace(/\s+/g, '');
   if (!stripped) return DEFAULT_COVERAGE_FACTOR;
   const unitsPerEm = font.unitsPerEm || 1000;
+  const emHeight =
+    typeof font.ascender === 'number' && typeof font.descender === 'number' ? font.ascender - font.descender : unitsPerEm;
+  const cache = GLYPH_AREA_CACHE.get(font) ?? new Map<string, number>();
+  if (!GLYPH_AREA_CACHE.has(font)) GLYPH_AREA_CACHE.set(font, cache);
   let sum = 0;
   let denom = 0;
   for (const ch of stripped) {
     const glyph = font.charToGlyph?.(ch);
     if (!glyph) continue;
-    const box = glyph.getBoundingBox?.();
     const adv = glyph.advanceWidth || unitsPerEm * 0.5;
-    if (box) {
-      const w = Math.max(0, box.x2 - box.x1);
-      const h = Math.max(0, box.y2 - box.y1);
-      const area = w * h;
-      if (area > 0) {
-        sum += area;
-        denom += adv * unitsPerEm;
+    let area = cache.get(ch);
+    if (area === undefined) {
+      area = estimateGlyphArea(glyph, unitsPerEm);
+      if (!area) {
+        const box = glyph.getBoundingBox?.();
+        if (box) {
+          const w = Math.max(0, box.x2 - box.x1);
+          const h = Math.max(0, box.y2 - box.y1);
+          area = w * h;
+        } else {
+          area = 0;
+        }
       }
+      cache.set(ch, area);
+    }
+    if (area > 0) {
+      sum += area;
+      denom += adv * emHeight;
     }
   }
   if (!denom) return DEFAULT_COVERAGE_FACTOR;
-  return clamp(sum / denom, 0.3, 0.9);
+  return clamp(sum / denom, 0.12, 0.9);
 }
 
 type TextLayer = {
@@ -289,6 +407,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     mode: 'none' | 'font' | 'browser' | 'unknown';
   }>({ unsupported: [], mode: 'none' });
   const [exportSessionId, setExportSessionId] = useState<string | null>(null);
+  const [pendingExport, setPendingExport] = useState(false);
+  const [pendingFitCenter, setPendingFitCenter] = useState(false);
 
   const textRefs = useRef<Map<string, SVGTextElement>>(new Map());
   const [layerMetrics, setLayerMetrics] = useState<Record<string, LayerMetrics>>({});
@@ -309,6 +429,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   const activeViewKey = product === 'box' ? boxSide : 'main';
   const activeViewLayers = useMemo(() => layersByView[activeViewKey] ?? [], [activeViewKey, layersByView]);
   const activeLayerId = activeLayerIdByView[activeViewKey] ?? activeViewLayers[0]?.id ?? '';
+  const exportViewKeys = useMemo(() => (product === 'box' ? BOX_SIDES.map((side) => side.id) : ['main']), [product]);
 
   const activeLayerSnapshot = useMemo<TextLayer>(
     () => ({
@@ -788,6 +909,21 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     setPos((p) => constrainToSafe(p));
   }, [constrainToSafe]);
 
+  useEffect(() => {
+    if (!pendingFitCenter || !activeLayerId) return;
+    const metrics = layerMetrics[activeLayerId];
+    if (!metrics) return;
+    const target = {
+      x: shape.cx - (metrics.offsetX + metrics.w / 2),
+      y: shape.cy - (metrics.offsetY + metrics.h / 2)
+    };
+    setPos((prev) => {
+      if (Math.abs(prev.x - target.x) < 0.5 && Math.abs(prev.y - target.y) < 0.5) return prev;
+      return target;
+    });
+    setPendingFitCenter(false);
+  }, [activeLayerId, layerMetrics, pendingFitCenter, shape.cx, shape.cy]);
+
   // Dragging
   const drag = useRef<{
     active: boolean;
@@ -948,20 +1084,6 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     return `inscription-${stem}`;
   }, [clientName]);
 
-  const editorState = useMemo(() => {
-    const s: EditorState = {
-      product,
-      sizeCm,
-      layersByView: layersByViewSnapshot,
-      activeLayerIdByView,
-      activeView: activeViewKey,
-      boxSide: product === 'box' ? boxSide : undefined,
-      clientName: clientName.trim(),
-      clientContact: clientContact.trim()
-    };
-    return s;
-  }, [activeLayerIdByView, activeViewKey, boxSide, clientContact, clientName, layersByViewSnapshot, product, sizeCm]);
-
   // Upload font (TTF/OTF) - used for “кривые” export
   const onUploadFont = async (file: File | null) => {
     if (!file) return;
@@ -979,6 +1101,14 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     });
     setFontPresetId('uploaded');
   };
+
+  const getLayerFontLabel = useCallback(
+    (layer: TextLayer) => {
+      if (layer.fontPresetId === 'uploaded') return loadedFont?.name ?? 'Загруженный шрифт';
+      return fontOptionsById.get(layer.fontPresetId)?.label ?? layer.fontPresetId;
+    },
+    [fontOptionsById, loadedFont]
+  );
 
   const getLayerFontCss = useCallback(
     (layer: TextLayer) => {
@@ -1014,14 +1144,15 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   );
 
   const makeSvgText = useCallback(
-    (opts?: { withGuides?: boolean; withMeasurements?: boolean; embedFonts?: boolean }) => {
+    (opts?: { withGuides?: boolean; withMeasurements?: boolean; embedFonts?: boolean; withSafeZone?: boolean }) => {
       const withGuides = opts?.withGuides ?? true;
       const withMeasurements = opts?.withMeasurements ?? false;
       const embedFonts = opts?.embedFonts ?? true;
       const wMm = sizeCm * 10;
       const hMm = sizeCm * 10;
 
-      const safe = showSafeZone && withGuides;
+      const withSafeZone = opts?.withSafeZone ?? showSafeZone;
+      const safe = withGuides && withSafeZone;
       const strokeColor = 'rgba(0,0,0,0.18)';
       const fontFace = embedFonts ? buildEmbeddedFontCss(activeLayersSnapshot) : '';
 
@@ -1072,64 +1203,6 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     },
     [activeLayersSnapshot, bbox, buildEmbeddedFontCss, getLayerFontCss, pos.x, pos.y, shape.outlinePath, shape.safePath, showSafeZone, sizeCm, widthCm]
   );
-
-  const downloadSvg = () => {
-    if (!clientReady) {
-      setClientModalOpen(true);
-      return;
-    }
-    const sideSuffix = product === 'box' ? `-${boxSide}` : '';
-    const svg = makeSvgText({ withGuides: true, withMeasurements: true, embedFonts: true });
-    downloadBlob(`${fileBase}${sideSuffix}.svg`, new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
-  };
-
-  const downloadEditableSvg = () => {
-    if (!clientReady) {
-      setClientModalOpen(true);
-      return;
-    }
-    const sideSuffix = product === 'box' ? `-${boxSide}` : '';
-    const svg = makeSvgText({ withGuides: false, withMeasurements: false, embedFonts: false });
-    downloadBlob(`${fileBase}${sideSuffix}-text.svg`, new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
-  };
-
-  const downloadStateJson = () => {
-    if (!clientReady) {
-      setClientModalOpen(true);
-      return;
-    }
-    const payload = {
-      createdAt: new Date().toISOString(),
-      state: editorState,
-      note: 'This file stores editor state and client contact for order follow-up.'
-    };
-    const sideSuffix = product === 'box' ? `-${boxSide}` : '';
-    downloadBlob(`${fileBase}${sideSuffix}.json`, new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
-  };
-
-  const downloadCurvesSvg = () => {
-    if (!clientReady) {
-      setClientModalOpen(true);
-      return;
-    }
-    const payload = buildCurvesPayload();
-    if (!payload) return;
-    const sideSuffix = product === 'box' ? `-${boxSide}` : '';
-    downloadBlob(`${fileBase}${sideSuffix}-curves.svg`, new Blob([payload.svg], { type: 'image/svg+xml;charset=utf-8' }));
-    void saveExportToServer();
-  };
-
-  const downloadDxf = () => {
-    if (!clientReady) {
-      setClientModalOpen(true);
-      return;
-    }
-    const payload = buildCurvesPayload();
-    if (!payload) return;
-    const sideSuffix = product === 'box' ? `-${boxSide}` : '';
-    downloadBlob(`${fileBase}${sideSuffix}.dxf`, new Blob([payload.dxf], { type: 'application/dxf;charset=utf-8' }));
-    void saveExportToServer();
-  };
 
   const importStateJson = async (file: File | null) => {
     if (!file) return;
@@ -1219,13 +1292,6 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     return activeLayersSnapshot.every((layer) => !!getFontForLayer(layer));
   }, [activeLayersSnapshot, getFontForLayer]);
 
-  const curvesHint = useMemo(() => {
-    if (canExportCurves) return '';
-    const needsUpload = activeLayersSnapshot.some((layer) => layer.fontPresetId === 'uploaded') && !loadedFont;
-    if (needsUpload) return 'Для экспорта кривых загрузите TTF/OTF.';
-    return 'Для экспорта кривых нужен файл шрифта. Дождитесь загрузки или выберите другой шрифт.';
-  }, [activeLayersSnapshot, canExportCurves, loadedFont]);
-
   const buildTextPathD = useCallback(
     (layer: TextLayer, fontData: LoadedFont) => {
       const font = fontData.font;
@@ -1282,12 +1348,11 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     const hMm = sizeCm * 10;
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${wMm}mm" height="${hMm}mm" viewBox="0 0 ${CANVAS_PX} ${CANVAS_PX}">
-  <path d="${shape.safePath}" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="2" stroke-dasharray="10 8"/>
   <path d="${combinedD}" fill="none" stroke="#000" stroke-width="1"/>
 </svg>`;
-    const dxf = svgPathToDxf(combinedD, mmPerPx);
+    const dxf = svgPathToDxf(combinedD, mmPerPx * DXF_SCALE);
     return { svg, dxf };
-  }, [activeLayersSnapshot, buildTextPathD, canExportCurves, getFontForLayer, mmPerPx, shape.safePath, sizeCm]);
+  }, [activeLayersSnapshot, buildTextPathD, canExportCurves, getFontForLayer, mmPerPx, sizeCm]);
 
   const exportMeta = useMemo(() => {
     if (!activeLayersSnapshot.length) {
@@ -1314,10 +1379,47 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     return { fontId: null, fontName: 'Несколько шрифтов', color: colorValue };
   }, [activeLayerId, activeLayersSnapshot, defaultColor, fontOptionsById, loadedFont]);
 
+  const exportDetails = useMemo(() => {
+    const views = exportViewKeys.map((viewKey) => {
+      const viewLabel = viewKey === 'main' ? 'Основная' : BOX_SIDES.find((side) => side.id === viewKey)?.label ?? viewKey;
+      const layers = (layersByViewSnapshot[viewKey] ?? []).map((layer) => {
+        const metrics = layerMetrics[layer.id];
+        const widthCm = metrics ? Number((metrics.w / pxPerCm).toFixed(1)) : null;
+        const heightCm = metrics ? Number((metrics.h / pxPerCm).toFixed(1)) : null;
+        return {
+          id: layer.id,
+          name: layer.name,
+          text: layer.text,
+          fontName: getLayerFontLabel(layer),
+          fontSizePx: layer.fontSizePx,
+          lineHeightMult: layer.lineHeightMult ?? 1.15,
+          letterSpacing: layer.letterSpacing,
+          color: layer.color,
+          widthCm,
+          heightCm
+        };
+      });
+      return { id: viewKey, label: viewLabel, layers };
+    });
+
+    return {
+      clientName: clientName.trim(),
+      clientContact: clientContact.trim(),
+      product,
+      sizeCm,
+      views
+    };
+  }, [clientContact, clientName, exportViewKeys, getLayerFontLabel, layerMetrics, layersByViewSnapshot, pxPerCm, product, sizeCm]);
+
   const saveExportToServer = useCallback(async () => {
-    if (!exportSessionId || !canExportCurves) return;
+    if (!exportSessionId) return;
+    if (!canExportCurves) {
+      if (!pendingExport) setPendingExport(true);
+      return;
+    }
     const payload = buildCurvesPayload();
     if (!payload) return;
+    if (pendingExport) setPendingExport(false);
     const { fontId, fontName, color: exportColor } = exportMeta;
 
     try {
@@ -1332,6 +1434,9 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
           fontId,
           fontName,
           color: exportColor,
+          clientName: clientName.trim(),
+          clientContact: clientContact.trim(),
+          details: exportDetails,
           svg: payload.svg,
           dxf: payload.dxf
         })
@@ -1342,19 +1447,28 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   }, [
     buildCurvesPayload,
     canExportCurves,
-    exportSessionId,
+    clientContact,
+    clientName,
+    exportDetails,
     exportMeta,
+    exportSessionId,
+    pendingExport,
     product,
     projectId,
     sizeCm
   ]);
+
+  useEffect(() => {
+    if (!pendingExport || !canExportCurves) return;
+    void saveExportToServer();
+  }, [canExportCurves, pendingExport, saveExportToServer]);
 
   const downloadPreviewPng = async () => {
     if (!clientReady) {
       setClientModalOpen(true);
       return;
     }
-    const svg = makeSvgText({ withGuides: true, withMeasurements: true, embedFonts: true });
+    const svg = makeSvgText({ withGuides: true, withMeasurements: true, embedFonts: true, withSafeZone: true });
     const dataUrl = await svgToPngDataUrl(svg, 1200, 1200);
     const res = await fetch(dataUrl);
     const blob = await res.blob();
@@ -1414,6 +1528,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     const next = resolveCentered(best);
     setFontSizePx(best);
     setPos({ x: next.x, y: next.y });
+    setPendingFitCenter(true);
   };
 
   const handleClientSubmit = (evt: React.FormEvent<HTMLFormElement>) => {
@@ -1470,8 +1585,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       <div className="section__head">
         <h1 className="section__title">Надпись онлайн</h1>
         <p className="section__subtitle">
-          Сделайте макет надписи для шара, звезды или bubble. Добавляйте несколько слоёв текста, настраивайте шрифт и цвет,
-          скачайте превью и файл для плоттера.
+          Сделайте макет надписи для шара, фольгированной звезды/сердца, фольгированного круга или bubble. Добавляйте несколько
+          слоёв текста, настраивайте шрифт и цвет, скачайте превью и файл для плоттера.
         </p>
       </div>
 
@@ -1630,29 +1745,14 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
               <Button onClick={downloadPreviewPng} type="button" variant="secondary">
                 Скачать превью (PNG)
               </Button>
-              <Button onClick={downloadSvg} type="button" variant="ghost">
-                Скачать SVG
-              </Button>
-              <Button onClick={downloadCurvesSvg} type="button" variant="ghost" disabled={!canExportCurves} title={curvesHint || undefined}>
-                SVG (кривые)
-              </Button>
-              <Button onClick={downloadDxf} type="button" variant="ghost" disabled={!canExportCurves} title={curvesHint || undefined}>
-                DXF
-              </Button>
-              <Button onClick={downloadEditableSvg} type="button" variant="ghost">
-                SVG (текст)
-              </Button>
-              <Button onClick={downloadStateJson} type="button" variant="ghost">
-                Сохранить (JSON)
-              </Button>
               <Button onClick={() => setClientModalOpen(true)} type="button" variant="ghost">
                 Данные клиента
               </Button>
             </div>
 
-            {!canExportCurves ? (
+            {pendingExport && !canExportCurves ? (
               <p className="muted" style={{ marginTop: 6 }}>
-                {curvesHint}
+                Подготавливаем файл для плоттера: загружаются шрифты.
               </p>
             ) : null}
 
@@ -1663,9 +1763,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             ) : null}
 
             <p className="muted" style={{ marginTop: 10 }}>
-              Файлы для плоттера сохраняются при скачивании DXF/SVG (кривые) или превью. Форматы <b>.studio3</b>, <b>.studio</b>
-              и <b>.gsp</b> закрытые — их создать напрямую нельзя. Для Silhouette Studio используйте DXF (кривые) или SVG (текст,
-              редактируемый при наличии установленных шрифтов).
+              После сохранения превью мы готовим файл для плоттера и сохраняем его для обработки заказа.
             </p>
           </div>
         </div>

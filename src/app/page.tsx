@@ -180,7 +180,7 @@ export default async function HomePage() {
           </div>
           <div className="panel panel--service">
             <h3 className="panel__title">Конструктор надписи</h3>
-            <p className="muted">Соберите надпись для шара, звезды или bubble и скачайте превью.</p>
+            <p className="muted">Соберите надпись для шара, звезды/сердца, круга (фольга) или bubble и скачайте превью.</p>
             <div className="hero__actions" style={{ marginTop: 12 }}>
               <Button href="/inscription" variant="secondary">
                 Открыть конструктор

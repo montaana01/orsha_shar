@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { PRODUCT_SIZES_CM } from '@/content/inscription';
 import { execute } from '@/lib/db';
 import { ensureDir, writeFileSafe } from '@/lib/files';
-import { isSafePathSegment, normalizeHexColor, requireText } from '@/lib/validation';
+import { isSafePathSegment, normalizeHexColor, optionalText, requireText } from '@/lib/validation';
 
 export const runtime = 'nodejs';
 
@@ -14,6 +14,7 @@ function safeSegment(input: string) {
 }
 
 const MAX_EXPORT_CHARS = 2_000_000;
+const MAX_DETAILS_CHARS = 200_000;
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,8 +30,16 @@ export async function POST(request: NextRequest) {
     const color = normalizeHexColor(String(payload.color ?? ''));
     const svg = String(payload.svg ?? '');
     const dxf = String(payload.dxf ?? '');
+    const clientName = optionalText(String(payload.clientName ?? ''), 190);
+    const clientContact = optionalText(String(payload.clientContact ?? ''), 190);
+    const detailsRaw = payload.details ?? null;
+    const detailsJson = detailsRaw ? JSON.stringify(detailsRaw) : '';
 
     if (!sessionIdRaw || !projectId || !product || !sizeCm || !svg || !dxf || !fontName || !color) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    if (clientName === null || clientContact === null) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
@@ -50,6 +59,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
     }
 
+    if (detailsJson.length > MAX_DETAILS_CHARS) {
+      return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+    }
+
     const sessionId = safeSegment(sessionIdRaw);
     const exportId = crypto.randomBytes(10).toString('hex');
 
@@ -66,8 +79,8 @@ export async function POST(request: NextRequest) {
     const relDxf = path.posix.join(sessionId, `${exportId}.dxf`);
 
     await execute(
-      'INSERT INTO inscription_exports (session_id, export_id, project_hash, product, size_cm, font_id, font_name, color, svg_path, dxf_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [sessionId, exportId, projectId, product, sizeCm, fontId, fontName, color, relSvg, relDxf]
+      'INSERT INTO inscription_exports (session_id, export_id, project_hash, product, size_cm, font_id, font_name, color, client_name, client_contact, details_json, svg_path, dxf_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [sessionId, exportId, projectId, product, sizeCm, fontId, fontName, color, clientName, clientContact, detailsJson, relSvg, relDxf]
     );
 
     return NextResponse.json({ ok: true, exportId });

@@ -1172,10 +1172,12 @@ h3 {
 
 .inscription__preview {
   padding: 16px;
+  min-width: 0;
 }
 
 .inscription__controls {
   padding: 16px;
+  min-width: 0;
 }
 
 .inscription__grid {
@@ -1221,6 +1223,7 @@ h3 {
 
 .kpi__value {
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
 .ok {
@@ -1285,6 +1288,7 @@ h3 {
 .layerItem__preview {
   font-size: 12px;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .toggle {

@@ -5,7 +5,7 @@ import { getColors, getFonts } from '@/lib/data';
 export const metadata: Metadata = {
   title: 'Конфигуратор надписи для фигуры',
   description:
-    'Редактор надписи для шара, фольгированной звезды и bubble. Выбор шрифта/цвета и текста.'
+    'Редактор надписи для шара, фольгированной звезды/сердца, фольгированного круга и bubble. Выбор шрифта/цвета и текста.'
 };
 
 export const dynamic = 'force-dynamic';
