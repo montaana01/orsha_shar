@@ -240,7 +240,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       name: `Слой ${index}`,
       text: defaultLayerText,
       fontPresetId: defaultFontPresetId,
-      fontSizePx: 64,
+      fontSizePx: 30,
       lineHeightMult: 1.15,
       letterSpacing: 0,
       color: defaultColor,
@@ -269,7 +269,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   const [text, setText] = useState<string>(defaultLayerText);
   const [layerName, setLayerName] = useState<string>('Слой 1');
   const [fontPresetId, setFontPresetId] = useState<string>(defaultFontPresetId);
-  const [fontSizePx, setFontSizePx] = useState<number>(64);
+  const [fontSizePx, setFontSizePx] = useState<number>(30);
   const [lineHeightMult, setLineHeightMult] = useState<number>(1.15);
   const [letterSpacing, setLetterSpacing] = useState<number>(0);
   const [color, setColor] = useState<string>(defaultColor);
@@ -1169,7 +1169,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         name,
         text: source?.text ?? '',
         fontPresetId: source?.fontPresetId ?? defaultFontPresetId,
-        fontSizePx: source?.fontSizePx ?? 64,
+        fontSizePx: source?.fontSizePx ?? 30,
         lineHeightMult: source?.lineHeightMult ?? 1.15,
         letterSpacing: source?.letterSpacing ?? 0,
         color: source?.color ?? defaultColor,

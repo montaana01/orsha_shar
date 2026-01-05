@@ -32,18 +32,18 @@ export const PAYLOAD_LIMIT_G: Record<ProductType, Record<number, number>> = {
     60: Number.POSITIVE_INFINITY,
   },
   foilStar: {
-    45: 1.6,
-    60: 2.2
+    45: 7,
+    60: 8
   },
   bubble: {
-    45: 1.6,
-    50: 1.9,
-    60: 2.4
+    45: 8,
+    50: 9,
+    60: 10
   }
 };
 
 export const MATERIALS = [
-  { id: 'vinyl', label: 'Винил (наклейка)', gPerCm2: 0.011 },
+  { id: 'vinyl', label: 'Винил (наклейка)', gPerCm2: 0.1 },
 ] as const;
 
 export const COLOR_PRESETS = [

@@ -165,7 +165,9 @@ export default async function AdminPage({ searchParams }: Props) {
                     </div>
                     {category.heroImage ? (
                       <div className="adminHeroPreview">
-                        <Image src={category.heroImage} alt="" width={160} height={120} sizes="160px" />
+                        <div className="adminHeroImage watermarked">
+                          <Image src={category.heroImage} alt="" width={160} height={120} sizes="160px" />
+                        </div>
                         <div className="muted" style={{ fontSize: 12 }}>
                           {category.heroImage}
                         </div>
@@ -216,14 +218,9 @@ export default async function AdminPage({ searchParams }: Props) {
                           <input type="hidden" name="id" value={image.id} />
                           <input type="hidden" name="tab" value="categories" />
                           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                            <Image
-                              src={image.url}
-                              alt=""
-                              width={80}
-                              height={80}
-                              sizes="80px"
-                              style={{ objectFit: 'cover', borderRadius: 12, border: '1px solid rgba(0,0,0,0.08)' }}
-                            />
+                            <div className="adminThumb watermarked">
+                              <Image src={image.url} alt="" width={80} height={80} sizes="80px" style={{ objectFit: 'cover' }} />
+                            </div>
                             <div>
                               <div style={{ fontSize: 13 }}>{image.fileName}</div>
                               <div className="muted" style={{ fontSize: 12 }}>
