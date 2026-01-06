@@ -8,6 +8,14 @@ export const PRODUCT_LABEL: Record<ProductType, string> = {
   box: 'Коробка сюрприз'
 };
 
+export const PRODUCT_FILE_LABEL: Record<ProductType, string> = {
+  foilStar: 'foil-star',
+  foilHeart: 'foil-heart',
+  foilCircle: 'foil-circle',
+  bubble: 'bubbles',
+  box: 'box'
+};
+
 export const PRODUCT_SIZES_CM: Record<ProductType, number[]> = {
   box: [60],
   foilStar: [30, 34, 50],

@@ -95,6 +95,10 @@ a:hover {
   color: var(--muted);
 }
 
+.capitalize {
+  text-transform: capitalize;
+}
+
 .list {
   list-style: none;
   padding: 0;

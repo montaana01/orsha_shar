@@ -15,6 +15,7 @@ function safeSegment(input: string) {
 
 const MAX_EXPORT_CHARS = 2_000_000;
 const MAX_DETAILS_CHARS = 200_000;
+const MAX_VIEW_EXPORTS = 8;
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,6 +35,8 @@ export async function POST(request: NextRequest) {
     const clientContact = optionalText(String(payload.clientContact ?? ''), 190);
     const detailsRaw = payload.details ?? null;
     const detailsJson = detailsRaw ? JSON.stringify(detailsRaw) : '';
+    const viewExportsRaw = Array.isArray(payload.viewExports) ? payload.viewExports : [];
+    const viewExports: Array<{ view: string; svg: string; dxf: string }> = [];
 
     if (!sessionIdRaw || !projectId || !product || !sizeCm || !svg || !dxf || !fontName || !color) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
@@ -41,6 +44,31 @@ export async function POST(request: NextRequest) {
 
     if (clientName === null || clientContact === null) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    if (viewExportsRaw.length > MAX_VIEW_EXPORTS) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    let viewChars = 0;
+    for (const entry of viewExportsRaw) {
+      const view = String(entry?.view ?? '');
+      const viewSvg = String(entry?.svg ?? '');
+      const viewDxf = String(entry?.dxf ?? '');
+      if (!view || !viewSvg || !viewDxf) {
+        return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+      }
+      if (!isSafePathSegment(view, 40)) {
+        return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+      }
+      if (viewSvg.length > MAX_EXPORT_CHARS || viewDxf.length > MAX_EXPORT_CHARS) {
+        return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+      }
+      viewChars += viewSvg.length + viewDxf.length;
+      if (viewChars > MAX_EXPORT_CHARS * MAX_VIEW_EXPORTS) {
+        return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+      }
+      viewExports.push({ view, svg: viewSvg, dxf: viewDxf });
     }
 
     if (!isSafePathSegment(projectId, 80)) {
@@ -74,6 +102,13 @@ export async function POST(request: NextRequest) {
 
     await writeFileSafe(svgPath, Buffer.from(svg, 'utf8'));
     await writeFileSafe(dxfPath, Buffer.from(dxf, 'utf8'));
+
+    for (const entry of viewExports) {
+      const viewSvgPath = path.join(dir, `${exportId}-${entry.view}.svg`);
+      const viewDxfPath = path.join(dir, `${exportId}-${entry.view}.dxf`);
+      await writeFileSafe(viewSvgPath, Buffer.from(entry.svg, 'utf8'));
+      await writeFileSafe(viewDxfPath, Buffer.from(entry.dxf, 'utf8'));
+    }
 
     const relSvg = path.posix.join(sessionId, `${exportId}.svg`);
     const relDxf = path.posix.join(sessionId, `${exportId}.dxf`);

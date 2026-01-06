@@ -10,6 +10,7 @@ import {
   MAX_CHARS,
   MAX_LINES,
   PAYLOAD_LIMIT_G,
+  PRODUCT_FILE_LABEL,
   PRODUCT_LABEL,
   PRODUCT_SIZES_CM,
   type ProductType
@@ -28,8 +29,23 @@ const BOX_SIDES = [
   { id: 'back', label: 'Задняя' },
   { id: 'left', label: 'Левая' }
 ] as const;
+const FOIL_SIDES = [
+  { id: 'foil-front', label: 'Лицевая' },
+  { id: 'foil-back', label: 'Обратная' }
+] as const;
 
 type BoxSide = (typeof BOX_SIDES)[number]['id'];
+type FoilSide = (typeof FOIL_SIDES)[number]['id'];
+const FOIL_PRODUCTS = new Set<ProductType>(['foilStar', 'foilHeart', 'foilCircle']);
+
+function getViewLabel(viewKey: string) {
+  if (viewKey === 'main') return 'Основная';
+  return (
+    BOX_SIDES.find((side) => side.id === viewKey)?.label ??
+    FOIL_SIDES.find((side) => side.id === viewKey)?.label ??
+    viewKey
+  );
+}
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -158,6 +174,13 @@ function sanitizeFileStem(input: string) {
   return cleaned || 'client';
 }
 
+function formatDateStamp(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -169,7 +192,12 @@ function downloadBlob(filename: string, blob: Blob) {
   URL.revokeObjectURL(url);
 }
 
-async function svgToPngDataUrl(svgText: string, wPx: number, hPx: number): Promise<string> {
+async function svgToPngDataUrl(
+  svgText: string,
+  wPx: number,
+  hPx: number,
+  opts?: { title?: string; titleHeight?: number }
+): Promise<string> {
   const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
   const svgUrl = URL.createObjectURL(svgBlob);
 
@@ -182,14 +210,27 @@ async function svgToPngDataUrl(svgText: string, wPx: number, hPx: number): Promi
     img.onerror = () => reject(new Error('Failed to render SVG'));
   });
 
+  const title = opts?.title?.trim();
+  const titleHeight = title ? (opts?.titleHeight ?? 44) : 0;
+
   const canvas = document.createElement('canvas');
   canvas.width = wPx;
-  canvas.height = hPx;
+  canvas.height = hPx + titleHeight;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No canvas context');
 
+  if (title) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, wPx, titleHeight);
+    ctx.fillStyle = '#111111';
+    ctx.font = '600 16px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(title, wPx / 2, titleHeight / 2);
+  }
+
   // Transparent background is fine for preview
-  ctx.drawImage(img, 0, 0, wPx, hPx);
+  ctx.drawImage(img, 0, titleHeight, wPx, hPx);
   URL.revokeObjectURL(svgUrl);
 
   return canvas.toDataURL('image/png');
@@ -299,6 +340,7 @@ type EditorState = {
   activeLayerIdByView: Record<string, string>;
   activeView?: string;
   boxSide?: BoxSide;
+  foilSide?: FoilSide;
   clientName?: string;
   clientContact?: string;
 };
@@ -348,6 +390,14 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     return COLOR_PRESETS;
   }, [colors]);
 
+  const colorOptionsByValue = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const option of colorOptions) {
+      map.set(option.value.toLowerCase(), option.label);
+    }
+    return map;
+  }, [colorOptions]);
+
   const defaultLayerText = 'С ДНЁМ\nРОЖДЕНИЯ';
   const defaultFontPresetId = fontOptions[0]?.id ?? 'uploaded';
   const defaultColor = colorOptions[0]?.value ?? '#FFFFFF';
@@ -370,14 +420,18 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     const right = [createLayer(1)];
     const back = [createLayer(1)];
     const left = [createLayer(1)];
+    const foilFront = [createLayer(1)];
+    const foilBack = [createLayer(1)];
     return {
-      layersByView: { main, front, right, back, left },
+      layersByView: { main, front, right, back, left, 'foil-front': foilFront, 'foil-back': foilBack },
       activeLayerIdByView: {
         main: main[0].id,
         front: front[0].id,
         right: right[0].id,
         back: back[0].id,
-        left: left[0].id
+        left: left[0].id,
+        'foil-front': foilFront[0].id,
+        'foil-back': foilBack[0].id
       }
     };
   }, [defaultColor, defaultFontPresetId, defaultLayerText]);
@@ -393,6 +447,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   const [color, setColor] = useState<string>(defaultColor);
   const [pos, setPos] = useState<{ x: number; y: number }>({ x: CANVAS_PX / 2, y: CANVAS_PX / 2 });
   const [boxSide, setBoxSide] = useState<BoxSide>('front');
+  const [foilSide, setFoilSide] = useState<FoilSide>('foil-front');
   const [layersByView, setLayersByView] = useState<Record<string, TextLayer[]>>(initViews.layersByView);
   const [activeLayerIdByView, setActiveLayerIdByView] = useState<Record<string, string>>(initViews.activeLayerIdByView);
   const [clientName, setClientName] = useState<string>('');
@@ -426,10 +481,15 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
   const material = MATERIALS[0];
 
-  const activeViewKey = product === 'box' ? boxSide : 'main';
+  const isFoilProduct = FOIL_PRODUCTS.has(product);
+  const activeViewKey = product === 'box' ? boxSide : isFoilProduct ? foilSide : 'main';
   const activeViewLayers = useMemo(() => layersByView[activeViewKey] ?? [], [activeViewKey, layersByView]);
   const activeLayerId = activeLayerIdByView[activeViewKey] ?? activeViewLayers[0]?.id ?? '';
-  const exportViewKeys = useMemo(() => (product === 'box' ? BOX_SIDES.map((side) => side.id) : ['main']), [product]);
+  const exportViewKeys = useMemo(() => {
+    if (product === 'box') return BOX_SIDES.map((side) => side.id);
+    if (isFoilProduct) return FOIL_SIDES.map((side) => side.id);
+    return ['main'];
+  }, [isFoilProduct, product]);
 
   const activeLayerSnapshot = useMemo<TextLayer>(
     () => ({
@@ -488,6 +548,22 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       });
     },
     [activeLayerId, activeLayerSnapshot]
+  );
+
+  const selectView = useCallback(
+    (viewKey: string) => {
+      commitActiveLayer(activeViewKey);
+      const viewLayers = layersByView[viewKey] ?? [];
+      const nextId = activeLayerIdByView[viewKey] ?? viewLayers[0]?.id;
+      const nextLayer = viewLayers.find((layer) => layer.id === nextId) ?? viewLayers[0];
+      if (nextLayer) {
+        setActiveLayerIdByView((prev) => ({ ...prev, [viewKey]: nextLayer.id }));
+        applyLayerToState(nextLayer);
+      } else {
+        setPos({ x: CANVAS_PX / 2, y: CANVAS_PX / 2 });
+      }
+    },
+    [activeLayerIdByView, activeViewKey, applyLayerToState, commitActiveLayer, layersByView]
   );
 
   const selectLayer = useCallback(
@@ -877,6 +953,48 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
   const insideNow = useMemo(() => isInsideSafe(pos.x, pos.y), [isInsideSafe, pos.x, pos.y]);
 
+  const isLayerInsideSafe = useCallback(
+    (layer: TextLayer) => {
+      const metrics = layerMetrics[layer.id];
+      if (!metrics) return false;
+      const x0 = layer.pos.x + metrics.offsetX;
+      const y0 = layer.pos.y + metrics.offsetY;
+      const pts: Point[] = [
+        { x: x0, y: y0 },
+        { x: x0 + metrics.w, y: y0 },
+        { x: x0 + metrics.w, y: y0 + metrics.h },
+        { x: x0, y: y0 + metrics.h }
+      ];
+
+      if (shape.kind === 'circle') {
+        const r2 = shape.safeRadius * shape.safeRadius;
+        return pts.every((p) => (p.x - shape.cx) ** 2 + (p.y - shape.cy) ** 2 <= r2);
+      }
+
+      return pts.every((p) => pointInPolygon(shape.safePoints, p));
+    },
+    [layerMetrics, shape]
+  );
+
+  const hasLayerMetrics = useMemo(
+    () => activeLayersSnapshot.every((layer) => Boolean(layerMetrics[layer.id])),
+    [activeLayersSnapshot, layerMetrics]
+  );
+
+  const allInsideSafe = useMemo(() => {
+    if (!hasLayerMetrics) return false;
+    return activeLayersSnapshot.every((layer) => isLayerInsideSafe(layer));
+  }, [activeLayersSnapshot, hasLayerMetrics, isLayerInsideSafe]);
+
+  const exportAllowed = hasLayerMetrics && allInsideSafe && payloadOk;
+  const exportBlockReason = !hasLayerMetrics
+    ? 'Подготавливаем размеры слоя.'
+    : !allInsideSafe
+      ? 'Надпись выходит за безопасную зону.'
+      : !payloadOk
+        ? 'Превышен допустимый вес надписи.'
+        : '';
+
   const constrainToSafe = useCallback(
     (candidate: { x: number; y: number }) => {
       if (isInsideSafe(candidate.x, candidate.y)) return candidate;
@@ -1084,10 +1202,14 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
   const projectId = useMemo(() => fnv1a(projectSeed), [projectSeed]);
 
+  const downloadStamp = useMemo(() => formatDateStamp(new Date()), []);
+
   const fileBase = useMemo(() => {
     const stem = sanitizeFileStem(clientName);
-    return `inscription-${stem}`;
-  }, [clientName]);
+    const productTag = PRODUCT_FILE_LABEL[product] ?? product;
+    const parts = [downloadStamp, productTag, `${sizeCm}cm`, stem];
+    return parts.filter(Boolean).join('_');
+  }, [clientName, downloadStamp, product, sizeCm]);
 
   // Upload font (TTF/OTF) - used for “кривые” export
   const onUploadFont = async (file: File | null) => {
@@ -1149,7 +1271,14 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   );
 
   const makeSvgText = useCallback(
-    (opts?: { withGuides?: boolean; withMeasurements?: boolean; embedFonts?: boolean; withSafeZone?: boolean }) => {
+    (opts?: {
+      withGuides?: boolean;
+      withMeasurements?: boolean;
+      embedFonts?: boolean;
+      withSafeZone?: boolean;
+      layers?: TextLayer[];
+      focusLayerId?: string;
+    }) => {
       const withGuides = opts?.withGuides ?? true;
       const withMeasurements = opts?.withMeasurements ?? false;
       const embedFonts = opts?.embedFonts ?? true;
@@ -1159,9 +1288,13 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       const withSafeZone = opts?.withSafeZone ?? showSafeZone;
       const safe = withGuides && withSafeZone;
       const strokeColor = 'rgba(0,0,0,0.18)';
-      const fontFace = embedFonts ? buildEmbeddedFontCss(activeLayersSnapshot) : '';
+      const layers = opts?.layers ?? activeLayersSnapshot;
+      const focusLayerId = opts?.focusLayerId ?? activeLayerId;
+      const focusLayer = layers.find((layer) => layer.id === focusLayerId) ?? layers[0];
+      const focusMetrics = focusLayer ? layerMetrics[focusLayer.id] : null;
+      const fontFace = embedFonts ? buildEmbeddedFontCss(layers) : '';
 
-      const texts = activeLayersSnapshot
+      const texts = layers
         .map((layer) => {
           const lines = sanitizeText(layer.text).split('\n');
           const lineHeight = layer.fontSizePx * (layer.lineHeightMult ?? 1.15);
@@ -1177,16 +1310,16 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         .join('');
 
       const measure = (() => {
-        if (!withMeasurements) return '';
-        const x0 = pos.x + bbox.offsetX;
-        const y0 = pos.y + bbox.offsetY;
-        const y = y0 + bbox.h + 16;
-        const label = `${widthCm.toFixed(1)} см`;
+        if (!withMeasurements || !focusLayer || !focusMetrics) return '';
+        const x0 = focusLayer.pos.x + focusMetrics.offsetX;
+        const y0 = focusLayer.pos.y + focusMetrics.offsetY;
+        const y = y0 + focusMetrics.h + 16;
+        const label = `${(focusMetrics.w / pxPerCm).toFixed(1)} см`;
         return `<g>
-  <line x1="${x0}" y1="${y}" x2="${x0 + bbox.w}" y2="${y}" stroke="rgba(0,0,0,0.6)" stroke-width="2"/>
+  <line x1="${x0}" y1="${y}" x2="${x0 + focusMetrics.w}" y2="${y}" stroke="rgba(0,0,0,0.6)" stroke-width="2"/>
   <line x1="${x0}" y1="${y - 6}" x2="${x0}" y2="${y + 6}" stroke="rgba(0,0,0,0.6)" stroke-width="2"/>
-  <line x1="${x0 + bbox.w}" y1="${y - 6}" x2="${x0 + bbox.w}" y2="${y + 6}" stroke="rgba(0,0,0,0.6)" stroke-width="2"/>
-  <text x="${x0 + bbox.w / 2}" y="${y - 8}" text-anchor="middle" font-size="14" fill="rgba(0,0,0,0.7)">${label}</text>
+  <line x1="${x0 + focusMetrics.w}" y1="${y - 6}" x2="${x0 + focusMetrics.w}" y2="${y + 6}" stroke="rgba(0,0,0,0.6)" stroke-width="2"/>
+  <text x="${x0 + focusMetrics.w / 2}" y="${y - 8}" text-anchor="middle" font-size="14" fill="rgba(0,0,0,0.7)">${label}</text>
 </g>`;
       })();
 
@@ -1206,7 +1339,18 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   ${measure}
 </svg>`;
     },
-    [activeLayersSnapshot, bbox, buildEmbeddedFontCss, getLayerFontCss, pos.x, pos.y, shape.outlinePath, shape.safePath, showSafeZone, sizeCm, widthCm]
+    [
+      activeLayerId,
+      activeLayersSnapshot,
+      buildEmbeddedFontCss,
+      getLayerFontCss,
+      layerMetrics,
+      pxPerCm,
+      shape.outlinePath,
+      shape.safePath,
+      showSafeZone,
+      sizeCm
+    ]
   );
 
   const importStateJson = async (file: File | null) => {
@@ -1227,7 +1371,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     if (s.clientName) setClientName(s.clientName);
     if (s.clientContact) setClientContact(s.clientContact);
     if (s.clientName && s.clientContact) setClientModalOpen(false);
-    const viewKey = s.product === 'box' ? s.boxSide ?? 'front' : 'main';
+    const viewKey = s.product === 'box' ? s.boxSide ?? 'front' : FOIL_PRODUCTS.has(s.product) ? s.foilSide ?? 'foil-front' : 'main';
     let resolvedLayersByView: Record<string, TextLayer[]> = s.layersByView ?? {};
     let resolvedActiveByView: Record<string, string> = s.activeLayerIdByView ?? {};
 
@@ -1278,6 +1422,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     setActiveLayerIdByView((prev) => ({ ...prev, ...resolvedActiveByView }));
     if (s.product === 'box') {
       setBoxSide(viewKey as BoxSide);
+    } else if (FOIL_PRODUCTS.has(s.product)) {
+      setFoilSide(viewKey as FoilSide);
     }
 
     const viewLayers = (resolvedLayersByView[viewKey] ?? []) as TextLayer[];
@@ -1296,6 +1442,17 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   const canExportCurves = useMemo(() => {
     return activeLayersSnapshot.every((layer) => !!getFontForLayer(layer));
   }, [activeLayersSnapshot, getFontForLayer]);
+
+  const canExportCurvesAllViews = useMemo(() => {
+    if (exportViewKeys.length <= 1) return canExportCurves;
+    for (const viewKey of exportViewKeys) {
+      const layers = layersByViewSnapshot[viewKey] ?? [];
+      for (const layer of layers) {
+        if (!getFontForLayer(layer)) return false;
+      }
+    }
+    return true;
+  }, [canExportCurves, exportViewKeys, getFontForLayer, layersByViewSnapshot]);
 
   const buildTextPathD = useCallback(
     (layer: TextLayer, fontData: LoadedFont) => {
@@ -1338,88 +1495,116 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     []
   );
 
-  const buildCurvesPayload = useCallback(() => {
-    if (!canExportCurves) return null;
-    const paths: string[] = [];
-    for (const layer of activeLayersSnapshot) {
-      const fontData = getFontForLayer(layer);
-      if (!fontData) return null;
-      const p = buildTextPathD(layer, fontData);
-      if (p?.d) paths.push(p.d);
-    }
-    const combinedD = paths.join(' ');
-    if (!combinedD) return null;
-    const wMm = sizeCm * 10;
-    const hMm = sizeCm * 10;
-    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+  const buildCurvesPayloadForLayers = useCallback(
+    (layers: TextLayer[]) => {
+      if (!layers.length) return null;
+      const paths: string[] = [];
+      for (const layer of layers) {
+        const fontData = getFontForLayer(layer);
+        if (!fontData) return null;
+        const p = buildTextPathD(layer, fontData);
+        if (p?.d) paths.push(p.d);
+      }
+      const combinedD = paths.join(' ');
+      if (!combinedD) return null;
+      const wMm = sizeCm * 10;
+      const hMm = sizeCm * 10;
+      const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${wMm}mm" height="${hMm}mm" viewBox="0 0 ${CANVAS_PX} ${CANVAS_PX}">
   <path d="${combinedD}" fill="none" stroke="#000" stroke-width="1"/>
 </svg>`;
-    const bounds = (() => {
-      if (shape.kind === 'circle') {
+      const bounds = (() => {
+        if (shape.kind === 'circle') {
+          return {
+            minX: shape.cx - shape.outerRadius,
+            maxX: shape.cx + shape.outerRadius,
+            minY: shape.cy - shape.outerRadius,
+            maxY: shape.cy + shape.outerRadius
+          };
+        }
+        const xs = shape.outerPoints.map((p) => p.x);
+        const ys = shape.outerPoints.map((p) => p.y);
         return {
-          minX: shape.cx - shape.outerRadius,
-          maxX: shape.cx + shape.outerRadius,
-          minY: shape.cy - shape.outerRadius,
-          maxY: shape.cy + shape.outerRadius
+          minX: Math.min(...xs),
+          maxX: Math.max(...xs),
+          minY: Math.min(...ys),
+          maxY: Math.max(...ys)
         };
+      })();
+
+      const textBounds = layers.reduce<{ minX: number; maxX: number; minY: number; maxY: number } | null>(
+        (acc, layer) => {
+          const metrics = layerMetrics[layer.id];
+          if (!metrics) return acc;
+          const x0 = layer.pos.x + metrics.offsetX;
+          const y0 = layer.pos.y + metrics.offsetY;
+          const x1 = x0 + metrics.w;
+          const y1 = y0 + metrics.h;
+          if (!acc) return { minX: x0, maxX: x1, minY: y0, maxY: y1 };
+          return {
+            minX: Math.min(acc.minX, x0),
+            maxX: Math.max(acc.maxX, x1),
+            minY: Math.min(acc.minY, y0),
+            maxY: Math.max(acc.maxY, y1)
+          };
+        },
+        null
+      );
+
+      const contentMaxY = Math.max(bounds.maxY, textBounds?.maxY ?? bounds.maxY);
+      const measureY = contentMaxY + 18;
+      const labelY = measureY + 20;
+      const measureD = [
+        `M ${bounds.minX} ${measureY} L ${bounds.maxX} ${measureY}`,
+        `M ${bounds.minX} ${measureY - 6} L ${bounds.minX} ${measureY + 6}`,
+        `M ${bounds.maxX} ${measureY - 6} L ${bounds.maxX} ${measureY + 6}`
+      ].join(' ');
+
+      let labelD = '';
+      const labelFontData = getFontForLayer(layers[0]);
+      if (labelFontData) {
+        const labelLayer: TextLayer = {
+          id: 'measure',
+          name: 'Размер',
+          text: `${sizeCm} см`,
+          fontPresetId: layers[0]?.fontPresetId ?? 'uploaded',
+          fontSizePx: 18,
+          lineHeightMult: 1.1,
+          letterSpacing: 0,
+          color: '#000000',
+          pos: { x: (bounds.minX + bounds.maxX) / 2, y: labelY }
+        };
+        const labelPath = buildTextPathD(labelLayer, labelFontData);
+        labelD = labelPath?.d ?? '';
       }
-      const xs = shape.outerPoints.map((p) => p.x);
-      const ys = shape.outerPoints.map((p) => p.y);
-      return {
-        minX: Math.min(...xs),
-        maxX: Math.max(...xs),
-        minY: Math.min(...ys),
-        maxY: Math.max(...ys)
-      };
-    })();
 
-    const measureY = Math.min(CANVAS_PX - 32, bounds.maxY + 12);
-    const labelY = Math.min(CANVAS_PX - 12, measureY + 16);
-    const measureD = [
-      `M ${bounds.minX} ${measureY} L ${bounds.maxX} ${measureY}`,
-      `M ${bounds.minX} ${measureY - 6} L ${bounds.minX} ${measureY + 6}`,
-      `M ${bounds.maxX} ${measureY - 6} L ${bounds.maxX} ${measureY + 6}`
-    ].join(' ');
+      const outlineD = (() => {
+        if (shape.kind !== 'circle') return shape.outlinePath;
+        const segments = 64;
+        const pts = Array.from({ length: segments }, (_, i) => {
+          const ang = (i / segments) * Math.PI * 2;
+          return { x: shape.cx + shape.outerRadius * Math.cos(ang), y: shape.cy + shape.outerRadius * Math.sin(ang) };
+        });
+        return pointsToPath(pts);
+      })();
 
-    let labelD = '';
-    const labelFontData = getFontForLayer(activeLayersSnapshot[0]);
-    if (labelFontData) {
-      const labelLayer: TextLayer = {
-        id: 'measure',
-        name: 'Размер',
-        text: `${sizeCm} см`,
-        fontPresetId: activeLayersSnapshot[0]?.fontPresetId ?? 'uploaded',
-        fontSizePx: 18,
-        lineHeightMult: 1.1,
-        letterSpacing: 0,
-        color: '#000000',
-        pos: { x: (bounds.minX + bounds.maxX) / 2, y: labelY }
-      };
-      const labelPath = buildTextPathD(labelLayer, labelFontData);
-      labelD = labelPath?.d ?? '';
-    }
+      const refPaths = [outlineD, measureD, labelD].filter(Boolean);
+      const dxf = pathsToDxf(
+        [
+          { d: combinedD, layer: 'CUT' },
+          ...(refPaths.length ? [{ d: refPaths.join(' '), layer: 'REF' }] : [])
+        ],
+        mmPerPx * DXF_SCALE
+      );
+      return { svg, dxf };
+    },
+    [buildTextPathD, getFontForLayer, layerMetrics, mmPerPx, shape, sizeCm]
+  );
 
-    const outlineD = (() => {
-      if (shape.kind !== 'circle') return shape.outlinePath;
-      const segments = 64;
-      const pts = Array.from({ length: segments }, (_, i) => {
-        const ang = (i / segments) * Math.PI * 2;
-        return { x: shape.cx + shape.outerRadius * Math.cos(ang), y: shape.cy + shape.outerRadius * Math.sin(ang) };
-      });
-      return pointsToPath(pts);
-    })();
-
-    const refPaths = [outlineD, measureD, labelD].filter(Boolean);
-    const dxf = pathsToDxf(
-      [
-        { d: combinedD, layer: 'CUT' },
-        ...(refPaths.length ? [{ d: refPaths.join(' '), layer: 'REF' }] : [])
-      ],
-      mmPerPx * DXF_SCALE
-    );
-    return { svg, dxf };
-  }, [activeLayersSnapshot, buildTextPathD, canExportCurves, getFontForLayer, mmPerPx, shape, sizeCm]);
+  const buildCurvesPayload = useCallback(() => {
+    if (!canExportCurves) return null;
+    return buildCurvesPayloadForLayers(activeLayersSnapshot);
+  }, [activeLayersSnapshot, buildCurvesPayloadForLayers, canExportCurves]);
 
   const exportMeta = useMemo(() => {
     if (!activeLayersSnapshot.length) {
@@ -1446,9 +1631,20 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     return { fontId: null, fontName: 'Несколько шрифтов', color: colorValue };
   }, [activeLayerId, activeLayersSnapshot, defaultColor, fontOptionsById, loadedFont]);
 
+  const displayFontLabel = exportMeta.fontName;
+  const displayColorLabel = useMemo(() => {
+    const normalized = exportMeta.color.toLowerCase();
+    return colorOptionsByValue.get(normalized) ?? exportMeta.color.toUpperCase();
+  }, [colorOptionsByValue, exportMeta.color]);
+
   const exportDetails = useMemo(() => {
     const views = exportViewKeys.map((viewKey) => {
-      const viewLabel = viewKey === 'main' ? 'Основная' : BOX_SIDES.find((side) => side.id === viewKey)?.label ?? viewKey;
+      const viewLabel =
+        viewKey === 'main'
+          ? 'Основная'
+          : BOX_SIDES.find((side) => side.id === viewKey)?.label ??
+          FOIL_SIDES.find((side) => side.id === viewKey)?.label ??
+          viewKey;
       const layers = (layersByViewSnapshot[viewKey] ?? []).map((layer) => {
         const metrics = layerMetrics[layer.id];
         const widthCm = metrics ? Number((metrics.w / pxPerCm).toFixed(1)) : null;
@@ -1478,9 +1674,16 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     };
   }, [clientContact, clientName, exportViewKeys, getLayerFontLabel, layerMetrics, layersByViewSnapshot, pxPerCm, product, sizeCm]);
 
+  const hasMultipleViews = exportViewKeys.length > 1;
+  const canExportFonts = hasMultipleViews ? canExportCurvesAllViews : canExportCurves;
+
   const saveExportToServer = useCallback(async () => {
     if (!exportSessionId) return;
-    if (!canExportCurves) {
+    if (!exportAllowed) {
+      if (pendingExport) setPendingExport(false);
+      return;
+    }
+    if (!canExportFonts) {
       if (!pendingExport) setPendingExport(true);
       return;
     }
@@ -1488,37 +1691,55 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     if (!payload) return;
     if (pendingExport) setPendingExport(false);
     const { fontId, fontName, color: exportColor } = exportMeta;
+    let viewExports: Array<{ view: string; svg: string; dxf: string }> | undefined;
+
+    if (hasMultipleViews) {
+      for (const viewKey of exportViewKeys) {
+        const layers = layersByViewSnapshot[viewKey] ?? [];
+        const nextPayload = buildCurvesPayloadForLayers(layers);
+        if (!nextPayload) continue;
+        if (!viewExports) viewExports = [];
+        viewExports.push({ view: viewKey, svg: nextPayload.svg, dxf: nextPayload.dxf });
+      }
+    }
 
     try {
+      const body = {
+        sessionId: exportSessionId,
+        projectId,
+        product,
+        sizeCm,
+        fontId,
+        fontName,
+        color: exportColor,
+        clientName: clientName.trim(),
+        clientContact: clientContact.trim(),
+        details: exportDetails,
+        svg: payload.svg,
+        dxf: payload.dxf,
+        ...(viewExports?.length ? { viewExports } : {})
+      };
       await fetch('/api/inscription/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: exportSessionId,
-          projectId,
-          product,
-          sizeCm,
-          fontId,
-          fontName,
-          color: exportColor,
-          clientName: clientName.trim(),
-          clientContact: clientContact.trim(),
-          details: exportDetails,
-          svg: payload.svg,
-          dxf: payload.dxf
-        })
+        body: JSON.stringify(body)
       });
     } catch {
       // ignore upload errors for now
     }
   }, [
     buildCurvesPayload,
-    canExportCurves,
+    buildCurvesPayloadForLayers,
+    canExportFonts,
     clientContact,
     clientName,
+    exportAllowed,
     exportDetails,
     exportMeta,
     exportSessionId,
+    exportViewKeys,
+    hasMultipleViews,
+    layersByViewSnapshot,
     pendingExport,
     product,
     projectId,
@@ -1526,21 +1747,57 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   ]);
 
   useEffect(() => {
-    if (!pendingExport || !canExportCurves) return;
+    if (!pendingExport || !canExportFonts) return;
     void saveExportToServer();
-  }, [canExportCurves, pendingExport, saveExportToServer]);
+  }, [canExportFonts, pendingExport, saveExportToServer]);
 
-  const downloadPreviewPng = async () => {
+  useEffect(() => {
+    if (exportAllowed || !pendingExport) return;
+    setPendingExport(false);
+  }, [exportAllowed, pendingExport]);
+
+  const viewSuffix = (viewKey: string) => {
+    if (viewKey === 'main') return '';
+    if (viewKey.startsWith('foil-')) return `-${viewKey.replace('foil-', '')}`;
+    return `-${viewKey}`;
+  };
+
+  const downloadPreviewPngForView = async (viewKey: string) => {
+    const layers = layersByViewSnapshot[viewKey] ?? [];
+    const svg = makeSvgText({
+      withGuides: true,
+      withMeasurements: true,
+      embedFonts: true,
+      withSafeZone: true,
+      layers,
+      focusLayerId: activeLayerIdByView[viewKey]
+    });
+    const dataUrl = await svgToPngDataUrl(svg, 1200, 1200, { title: getViewLabel(viewKey) });
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    downloadBlob(`${fileBase}${viewSuffix(viewKey)}.png`, blob);
+  };
+
+  const downloadAllSides = async () => {
+    if (!exportAllowed) return;
     if (!clientReady) {
       setClientModalOpen(true);
       return;
     }
-    const svg = makeSvgText({ withGuides: true, withMeasurements: true, embedFonts: true, withSafeZone: true });
-    const dataUrl = await svgToPngDataUrl(svg, 1200, 1200);
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
-    const sideSuffix = product === 'box' ? `-${boxSide}` : '';
-    downloadBlob(`${fileBase}${sideSuffix}.png`, blob);
+    const views = product === 'box' ? BOX_SIDES.map((side) => side.id) : FOIL_SIDES.map((side) => side.id);
+    await views.reduce((chain, viewKey) => {
+      return chain.then(() => downloadPreviewPngForView(viewKey));
+    }, Promise.resolve());
+    void saveExportToServer();
+  };
+
+  const downloadPreviewPng = async () => {
+    if (!exportAllowed) return;
+    if (!clientReady) {
+      setClientModalOpen(true);
+      return;
+    }
+    await downloadPreviewPngForView(activeViewKey);
     void saveExportToServer();
   };
 
@@ -1779,6 +2036,16 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             </div>
 
             <div className="kpi">
+              <div className="kpi__label">Шрифт</div>
+              <div className="kpi__value capitalize">{displayFontLabel}</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi__label">Цвет</div>
+              <div className="kpi__value capitalize">{displayColorLabel}</div>
+            </div>
+
+            <div className="kpi">
               <div className="kpi__label">Вес (оценка)</div>
               <div className="kpi__value">
                 {hasPayloadLimit ? (
@@ -1806,18 +2073,34 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                 <div className="kpi__label">Сторона</div>
                 <div className="kpi__value">{BOX_SIDES.find((side) => side.id === boxSide)?.label}</div>
               </div>
+            ) : isFoilProduct ? (
+              <div className="kpi">
+                <div className="kpi__label">Сторона</div>
+                <div className="kpi__value">{FOIL_SIDES.find((side) => side.id === foilSide)?.label}</div>
+              </div>
             ) : null}
 
             <div className="hero__actions" style={{ marginTop: 10, flexWrap: 'wrap' }}>
-              <Button onClick={downloadPreviewPng} type="button" variant="secondary">
+              <Button onClick={downloadPreviewPng} type="button" variant="secondary" disabled={!exportAllowed}>
                 Скачать превью (PNG)
               </Button>
+              {product === 'box' || isFoilProduct ? (
+                <Button onClick={downloadAllSides} type="button" variant="ghost" disabled={!exportAllowed}>
+                  Скачать все стороны
+                </Button>
+              ) : null}
               <Button onClick={() => setClientModalOpen(true)} type="button" variant="ghost">
                 Данные клиента
               </Button>
             </div>
 
-            {pendingExport && !canExportCurves ? (
+            {!exportAllowed ? (
+              <p className="bad" style={{ marginTop: 6 }}>
+                {exportBlockReason}
+              </p>
+            ) : null}
+
+            {pendingExport && !canExportFonts ? (
               <p className="muted" style={{ marginTop: 6 }}>
                 Подготавливаем файл для плоттера: загружаются шрифты.
               </p>
@@ -1830,7 +2113,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             ) : null}
 
             <p className="muted" style={{ marginTop: 10 }}>
-              После сохранения превью мы готовим файл для плоттера и сохраняем его для обработки заказа.
+              После сохранения надписи мы сформируем файл для плоттера и свяжемся с вами по указанным контактам.
             </p>
           </div>
         </div>
@@ -1845,19 +2128,10 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                 value={product}
                 onChange={(e) => {
                   const p = e.target.value as ProductType;
-                  commitActiveLayer(activeViewKey);
                   setProduct(p);
                   setSizeCm(PRODUCT_SIZES_CM[p][0]);
-                  const nextViewKey = p === 'box' ? boxSide : 'main';
-                  const viewLayers = layersByView[nextViewKey] ?? [];
-                  const nextId = activeLayerIdByView[nextViewKey] ?? viewLayers[0]?.id;
-                  const nextLayer = viewLayers.find((layer) => layer.id === nextId) ?? viewLayers[0];
-                  if (nextLayer) {
-                    setActiveLayerIdByView((prev) => ({ ...prev, [nextViewKey]: nextLayer.id }));
-                    applyLayerToState(nextLayer);
-                  } else {
-                    setPos({ x: CANVAS_PX / 2, y: CANVAS_PX / 2 });
-                  }
+                  const nextViewKey = p === 'box' ? boxSide : FOIL_PRODUCTS.has(p) ? foilSide : 'main';
+                  selectView(nextViewKey);
                 }}
               >
                 {Object.entries(PRODUCT_LABEL).map(([k, v]) => (
@@ -1888,18 +2162,33 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                   value={boxSide}
                   onChange={(e) => {
                     const nextSide = e.target.value as BoxSide;
-                    commitActiveLayer(activeViewKey);
                     setBoxSide(nextSide);
-                    const viewLayers = layersByView[nextSide] ?? [];
-                    const nextId = activeLayerIdByView[nextSide] ?? viewLayers[0]?.id;
-                    const nextLayer = viewLayers.find((layer) => layer.id === nextId) ?? viewLayers[0];
-                    if (nextLayer) {
-                      setActiveLayerIdByView((prev) => ({ ...prev, [nextSide]: nextLayer.id }));
-                      applyLayerToState(nextLayer);
-                    }
+                    selectView(nextSide);
                   }}
                 >
                   {BOX_SIDES.map((side) => (
+                    <option key={side.id} value={side.id}>
+                      {side.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
+            {isFoilProduct ? (
+              <label className="field">
+                <span className="field__label">Сторона фольги</span>
+                <select
+                  className="field__control"
+                  name="foil_side"
+                  value={foilSide}
+                  onChange={(e) => {
+                    const nextSide = e.target.value as FoilSide;
+                    setFoilSide(nextSide);
+                    selectView(nextSide);
+                  }}
+                >
+                  {FOIL_SIDES.map((side) => (
                     <option key={side.id} value={side.id}>
                       {side.label}
                     </option>

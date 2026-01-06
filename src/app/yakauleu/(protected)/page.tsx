@@ -13,6 +13,7 @@ import {
   getExports,
   getFonts
 } from '@/lib/data';
+import { isSafePathSegment } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -510,9 +511,29 @@ export default async function AdminPage({ searchParams }: Props) {
 
                         {views.length ? (
                           <div className="list">
-                            {views.map((view) => (
-                              <div key={view.id ?? view.label} className="panel" style={{ display: 'grid', gap: 8 }}>
-                                <div style={{ fontWeight: 600 }}>{view.label ?? view.id ?? 'Сторона'}</div>
+                            {views.map((view) => {
+                              const viewId = typeof view.id === 'string' && isSafePathSegment(view.id, 40) ? view.id : null;
+                              return (
+                                <div key={view.id ?? view.label} className="panel" style={{ display: 'grid', gap: 8 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                                    <div style={{ fontWeight: 600 }}>{view.label ?? view.id ?? 'Сторона'}</div>
+                                    {viewId ? (
+                                      <div className="hero__actions" style={{ marginLeft: 'auto' }}>
+                                        <a
+                                          className="btn btn--secondary"
+                                          href={`/yakauleu/exports/${exp.id}?type=svg&view=${encodeURIComponent(viewId)}`}
+                                        >
+                                          SVG
+                                        </a>
+                                        <a
+                                          className="btn btn--secondary"
+                                          href={`/yakauleu/exports/${exp.id}?type=dxf&view=${encodeURIComponent(viewId)}`}
+                                        >
+                                          DXF
+                                        </a>
+                                      </div>
+                                    ) : null}
+                                  </div>
                                 {view.layers?.length ? (
                                   view.layers.map((layer) => (
                                     <div key={layer.id ?? layer.name} style={{ display: 'grid', gap: 4 }}>
@@ -535,7 +556,8 @@ export default async function AdminPage({ searchParams }: Props) {
                                   <div className="muted">Нет данных по слоям.</div>
                                 )}
                               </div>
-                            ))}
+                            );
+                            })}
                           </div>
                         ) : (
                           <div className="muted">Подробности надписи отсутствуют.</div>
