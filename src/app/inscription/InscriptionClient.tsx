@@ -1746,6 +1746,15 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     sizeCm
   ]);
 
+  const handleSaveExport = useCallback(() => {
+    if (!clientReady) {
+      setClientModalOpen(true);
+      return;
+    }
+    if (!exportAllowed) return;
+    void saveExportToServer();
+  }, [clientReady, exportAllowed, saveExportToServer]);
+
   useEffect(() => {
     if (!pendingExport || !canExportFonts) return;
     void saveExportToServer();
@@ -2081,6 +2090,9 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             ) : null}
 
             <div className="hero__actions" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+              <Button onClick={handleSaveExport} type="button" variant="primary" disabled={!exportAllowed}>
+                Сохранить надпись
+              </Button>
               <Button onClick={downloadPreviewPng} type="button" variant="secondary" disabled={!exportAllowed}>
                 Скачать превью (PNG)
               </Button>

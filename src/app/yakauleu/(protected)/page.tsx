@@ -164,7 +164,7 @@ export default async function AdminPage({ searchParams }: Props) {
             <div className="list">
               {categoriesWithImages.map(({ category, images }) => (
                 <details key={category.id} className="panel" style={{ background: 'transparent' }}>
-                  <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                  <summary className="nav__link nav__link--summary">
                     {category.title} <span className="muted">({category.slug})</span>
                   </summary>
 
@@ -471,8 +471,17 @@ export default async function AdminPage({ searchParams }: Props) {
 
                   return (
                     <details key={exp.id} className="panel" style={{ background: 'transparent' }}>
-                      <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
-                        {productLabel} • {exp.sizeCm} см <span className="muted">({orderLabel})</span>
+                      <summary className="nav__link--summary nav__link--flex">
+                        <div className="nav__link nav__link--summary">
+                          {productLabel} • {exp.sizeCm} см <span className="muted">({orderLabel})</span>
+                        </div>
+                        <form method="post" action="/yakauleu/api/exports/delete">
+                          <input type="hidden" name="id" value={exp.id} />
+                          <input type="hidden" name="tab" value="exports" />
+                          <button className="btn btn--secondary" type="submit">
+                            Удалить
+                          </button>
+                        </form>
                       </summary>
 
                       <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
@@ -491,22 +500,6 @@ export default async function AdminPage({ searchParams }: Props) {
                           <div className="muted" style={{ fontSize: 12 }}>
                             Сессия: {exp.sessionId} • ID: {exp.projectHash}
                           </div>
-                        </div>
-
-                        <div className="hero__actions" style={{ flexWrap: 'wrap' }}>
-                          <a className="btn btn--secondary" href={`/yakauleu/exports/${exp.id}?type=svg`}>
-                            SVG
-                          </a>
-                          <a className="btn btn--secondary" href={`/yakauleu/exports/${exp.id}?type=dxf`}>
-                            DXF
-                          </a>
-                          <form method="post" action="/yakauleu/api/exports/delete">
-                            <input type="hidden" name="id" value={exp.id} />
-                            <input type="hidden" name="tab" value="exports" />
-                            <button className="btn btn--ghost" type="submit">
-                              Удалить
-                            </button>
-                          </form>
                         </div>
 
                         {views.length ? (
@@ -534,29 +527,29 @@ export default async function AdminPage({ searchParams }: Props) {
                                       </div>
                                     ) : null}
                                   </div>
-                                {view.layers?.length ? (
-                                  view.layers.map((layer) => (
-                                    <div key={layer.id ?? layer.name} style={{ display: 'grid', gap: 4 }}>
-                                      <div style={{ fontSize: 14 }}>{layer.name ?? 'Слой'}</div>
-                                      <div className="muted" style={{ fontSize: 12, whiteSpace: 'pre-wrap' }}>
-                                        {layer.text || '—'}
+                                  {view.layers?.length ? (
+                                    view.layers.map((layer) => (
+                                      <div key={layer.id ?? layer.name} style={{ display: 'grid', gap: 4 }}>
+                                        <div style={{ fontSize: 14 }}>{layer.name ?? 'Слой'}</div>
+                                        <div className="muted" style={{ fontSize: 12, whiteSpace: 'pre-wrap' }}>
+                                          {layer.text || '—'}
+                                        </div>
+                                        <div className="muted" style={{ fontSize: 12 }}>
+                                          {layer.fontName ? `Шрифт: ${layer.fontName}` : null}
+                                          {layer.fontSizePx ? ` • ${layer.fontSizePx}px` : ''}
+                                          {layer.letterSpacing ? ` • трекинг ${layer.letterSpacing}px` : ''}
+                                        </div>
+                                        <div className="muted" style={{ fontSize: 12 }}>
+                                          {layer.widthCm ? `Ширина: ${layer.widthCm} см` : 'Ширина: —'}
+                                          {layer.heightCm ? ` • Высота: ${layer.heightCm} см` : ''}
+                                        </div>
                                       </div>
-                                      <div className="muted" style={{ fontSize: 12 }}>
-                                        {layer.fontName ? `Шрифт: ${layer.fontName}` : null}
-                                        {layer.fontSizePx ? ` • ${layer.fontSizePx}px` : ''}
-                                        {layer.letterSpacing ? ` • трекинг ${layer.letterSpacing}px` : ''}
-                                      </div>
-                                      <div className="muted" style={{ fontSize: 12 }}>
-                                        {layer.widthCm ? `Ширина: ${layer.widthCm} см` : 'Ширина: —'}
-                                        {layer.heightCm ? ` • Высота: ${layer.heightCm} см` : ''}
-                                      </div>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <div className="muted">Нет данных по слоям.</div>
-                                )}
-                              </div>
-                            );
+                                    ))
+                                  ) : (
+                                    <div className="muted">Нет данных по слоям.</div>
+                                  )}
+                                </div>
+                              );
                             })}
                           </div>
                         ) : (
@@ -579,7 +572,7 @@ export default async function AdminPage({ searchParams }: Props) {
             <p className="muted">Удалённые элементы хранятся в базе с флагом и в папке `deleted`.</p>
             <div className="list">
               <details className="panel" style={{ background: 'transparent' }}>
-                <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                <summary className="nav__link nav__link--summary">
                   Категории ({deletedCategories.length})
                 </summary>
                 <div className="list" style={{ marginTop: 12 }}>
@@ -604,7 +597,7 @@ export default async function AdminPage({ searchParams }: Props) {
               </details>
 
               <details className="panel" style={{ background: 'transparent' }}>
-                <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                <summary className="nav__link nav__link--summary">
                   Фото категорий ({deletedImages.length})
                 </summary>
                 <div className="list" style={{ marginTop: 12 }}>
@@ -629,7 +622,7 @@ export default async function AdminPage({ searchParams }: Props) {
               </details>
 
               <details className="panel" style={{ background: 'transparent' }}>
-                <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                <summary className="nav__link nav__link--summary">
                   Шрифты ({deletedFonts.length})
                 </summary>
                 <div className="list" style={{ marginTop: 12 }}>
@@ -652,7 +645,7 @@ export default async function AdminPage({ searchParams }: Props) {
               </details>
 
               <details className="panel" style={{ background: 'transparent' }}>
-                <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                <summary className="nav__link nav__link--summary">
                   Цвета ({deletedColors.length})
                 </summary>
                 <div className="list" style={{ marginTop: 12 }}>
@@ -675,7 +668,7 @@ export default async function AdminPage({ searchParams }: Props) {
               </details>
 
               <details className="panel" style={{ background: 'transparent' }}>
-                <summary className="nav__link nav__link--summary" style={{ cursor: 'pointer' }}>
+                <summary className="nav__link nav__link--summary">
                   Экспорты ({deletedExports.length})
                 </summary>
                 <div className="list" style={{ marginTop: 12 }}>

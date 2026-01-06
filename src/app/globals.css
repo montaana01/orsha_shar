@@ -234,6 +234,12 @@ h3 {
   cursor: pointer;
 }
 
+.nav__link--flex {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
 .nav__link--summary::-webkit-details-marker {
   display: none;
 }
@@ -1035,8 +1041,8 @@ h3 {
   z-index: 2;
 }
 
-.watermarked > span,
-.watermarked > img {
+.watermarked>span,
+.watermarked>img {
   display: block;
   position: relative;
   z-index: 1;
