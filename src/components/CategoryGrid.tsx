@@ -18,13 +18,6 @@ export function CategoryGrid({ categories }: { categories: Category[] }) {
               <p className="card__desc">{category.description}</p>
             </div>
           </Link>
-          {phone ? (
-            <div className="card__actions">
-              <a className="btn btn--secondary" href={telHref(phone)}>
-                Позвонить
-              </a>
-            </div>
-          ) : null}
         </div>
       ))}
     </div>
