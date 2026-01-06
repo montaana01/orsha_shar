@@ -78,11 +78,12 @@ export async function restoreExportFiles(baseDir: string, exp: { session_id: str
 
 export async function purgeExpiredExports(days = EXPORT_RETENTION_DAYS) {
   const cutoff = new Date(Date.now() - days * DAY_MS);
+  const cutoffSql = cutoff.toISOString().slice(0, 19).replace('T', ' ');
   const rows = await query<ExportFilesRow>(
     `SELECT id, session_id, export_id, svg_path, dxf_path, updated_at
      FROM inscription_exports
      WHERE is_deleted = 1 AND updated_at < ?`,
-    [cutoff]
+    [cutoffSql]
   );
   if (!rows.length) return 0;
 
