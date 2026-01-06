@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { ColorPickerField } from '@/components/ColorPickerField';
 import { PRODUCT_LABEL } from '@/content/inscription';
+import { EXPORT_RETENTION_DAYS, purgeExpiredExports } from '@/lib/exports';
 import {
   getCategories,
   getCategoryImages,
@@ -13,12 +14,13 @@ import {
   getExports,
   getFonts
 } from '@/lib/data';
+import { getDiskUsage } from '@/lib/files';
 import { isSafePathSegment } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-type Props = { searchParams?: Promise<{ tab?: string }> };
+type Props = { searchParams?: Promise<{ tab?: string; section?: string }> };
 
 const TABS = [
   { id: 'categories', label: 'Категории' },
@@ -28,14 +30,20 @@ const TABS = [
   { id: 'archive', label: 'Архив' }
 ] as const;
 
+const ARCHIVE_SECTIONS = new Set(['categories', 'images', 'fonts', 'colors', 'exports']);
+
 type ExportDetails = {
   clientName?: string;
   clientContact?: string;
   product?: string;
   sizeCm?: number;
+  totalAreaCm2?: number;
+  totalWeightG?: number;
   views?: Array<{
     id?: string;
     label?: string;
+    areaCm2?: number;
+    weightG?: number;
     layers?: Array<{
       id?: string;
       name?: string;
@@ -60,9 +68,25 @@ function parseExportDetails(raw: string): ExportDetails | null {
   }
 }
 
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes)) return '—';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
 export default async function AdminPage({ searchParams }: Props) {
   const params = (await searchParams) ?? {};
   const activeTab = TABS.find((tab) => tab.id === params.tab) ?? TABS[0];
+  const sectionRaw = typeof params.section === 'string' ? params.section : '';
+  const activeArchiveSection = ARCHIVE_SECTIONS.has(sectionRaw) ? sectionRaw : '';
+  await purgeExpiredExports().catch(() => null);
+  const diskUsage = await getDiskUsage(process.cwd()).catch(() => null);
   const [categories, fonts, colors, exportsList] = await Promise.all([
     getCategories({ includeHidden: true }).catch(() => []),
     getFonts({ includeHidden: true }).catch(() => []),
@@ -570,8 +594,13 @@ export default async function AdminPage({ searchParams }: Props) {
           <div className="panel">
             <h2 className="panel__title">Архив удалённых данных</h2>
             <p className="muted">Удалённые элементы хранятся в базе с флагом и в папке `deleted`.</p>
+            {diskUsage ? (
+              <div className="muted" style={{ fontSize: 12, marginBottom: 12 }}>
+                Диск: свободно {formatBytes(diskUsage.freeBytes)} из {formatBytes(diskUsage.totalBytes)}
+              </div>
+            ) : null}
             <div className="list">
-              <details className="panel" style={{ background: 'transparent' }}>
+              <details className="panel" style={{ background: 'transparent' }} open={activeArchiveSection === 'categories'}>
                 <summary className="nav__link nav__link--summary">
                   Категории ({deletedCategories.length})
                 </summary>
@@ -588,6 +617,14 @@ export default async function AdminPage({ searchParams }: Props) {
                         <div className="muted" style={{ fontSize: 12 }}>
                           Архив: /deleted/gallery/{category.slug}
                         </div>
+                        <form method="post" action="/yakauleu/api/categories/restore">
+                          <input type="hidden" name="id" value={category.id} />
+                          <input type="hidden" name="tab" value="archive" />
+                          <input type="hidden" name="section" value="categories" />
+                          <button className="btn btn--secondary" type="submit">
+                            Восстановить
+                          </button>
+                        </form>
                       </div>
                     ))
                   ) : (
@@ -596,7 +633,7 @@ export default async function AdminPage({ searchParams }: Props) {
                 </div>
               </details>
 
-              <details className="panel" style={{ background: 'transparent' }}>
+              <details className="panel" style={{ background: 'transparent' }} open={activeArchiveSection === 'images'}>
                 <summary className="nav__link nav__link--summary">
                   Фото категорий ({deletedImages.length})
                 </summary>
@@ -613,6 +650,14 @@ export default async function AdminPage({ searchParams }: Props) {
                         <div className="muted" style={{ fontSize: 12 }}>
                           Архив: {image.url}
                         </div>
+                        <form method="post" action="/yakauleu/api/images/restore">
+                          <input type="hidden" name="id" value={image.id} />
+                          <input type="hidden" name="tab" value="archive" />
+                          <input type="hidden" name="section" value="images" />
+                          <button className="btn btn--secondary" type="submit">
+                            Восстановить
+                          </button>
+                        </form>
                       </div>
                     ))
                   ) : (
@@ -621,7 +666,7 @@ export default async function AdminPage({ searchParams }: Props) {
                 </div>
               </details>
 
-              <details className="panel" style={{ background: 'transparent' }}>
+              <details className="panel" style={{ background: 'transparent' }} open={activeArchiveSection === 'fonts'}>
                 <summary className="nav__link nav__link--summary">
                   Шрифты ({deletedFonts.length})
                 </summary>
@@ -636,6 +681,24 @@ export default async function AdminPage({ searchParams }: Props) {
                         <div className="muted" style={{ fontSize: 12 }}>
                           Удалено: {new Date(font.deletedAt).toLocaleString('ru-RU')}
                         </div>
+                        <div className="hero__actions" style={{ justifyContent: 'flex-start' }}>
+                          <form method="post" action="/yakauleu/api/fonts/restore">
+                            <input type="hidden" name="id" value={font.id} />
+                            <input type="hidden" name="tab" value="archive" />
+                            <input type="hidden" name="section" value="fonts" />
+                            <button className="btn btn--secondary" type="submit">
+                              Восстановить
+                            </button>
+                          </form>
+                          <form method="post" action="/yakauleu/api/fonts/purge">
+                            <input type="hidden" name="id" value={font.id} />
+                            <input type="hidden" name="tab" value="archive" />
+                            <input type="hidden" name="section" value="fonts" />
+                            <button className="btn btn--ghost" type="submit">
+                              Удалить навсегда
+                            </button>
+                          </form>
+                        </div>
                       </div>
                     ))
                   ) : (
@@ -644,7 +707,7 @@ export default async function AdminPage({ searchParams }: Props) {
                 </div>
               </details>
 
-              <details className="panel" style={{ background: 'transparent' }}>
+              <details className="panel" style={{ background: 'transparent' }} open={activeArchiveSection === 'colors'}>
                 <summary className="nav__link nav__link--summary">
                   Цвета ({deletedColors.length})
                 </summary>
@@ -659,6 +722,24 @@ export default async function AdminPage({ searchParams }: Props) {
                         <div className="muted" style={{ fontSize: 12 }}>
                           Удалено: {new Date(color.deletedAt).toLocaleString('ru-RU')}
                         </div>
+                        <div className="hero__actions" style={{ justifyContent: 'flex-start' }}>
+                          <form method="post" action="/yakauleu/api/colors/restore">
+                            <input type="hidden" name="id" value={color.id} />
+                            <input type="hidden" name="tab" value="archive" />
+                            <input type="hidden" name="section" value="colors" />
+                            <button className="btn btn--secondary" type="submit">
+                              Восстановить
+                            </button>
+                          </form>
+                          <form method="post" action="/yakauleu/api/colors/purge">
+                            <input type="hidden" name="id" value={color.id} />
+                            <input type="hidden" name="tab" value="archive" />
+                            <input type="hidden" name="section" value="colors" />
+                            <button className="btn btn--ghost" type="submit">
+                              Удалить навсегда
+                            </button>
+                          </form>
+                        </div>
                       </div>
                     ))
                   ) : (
@@ -667,7 +748,7 @@ export default async function AdminPage({ searchParams }: Props) {
                 </div>
               </details>
 
-              <details className="panel" style={{ background: 'transparent' }}>
+              <details className="panel" style={{ background: 'transparent' }} open={activeArchiveSection === 'exports'}>
                 <summary className="nav__link nav__link--summary">
                   Экспорты ({deletedExports.length})
                 </summary>
@@ -676,6 +757,11 @@ export default async function AdminPage({ searchParams }: Props) {
                     deletedExports.map((exp) => {
                       const productLabel =
                         PRODUCT_LABEL[exp.product as keyof typeof PRODUCT_LABEL] ?? exp.product;
+                      const deletedAt = new Date(exp.deletedAt).getTime();
+                      const expiresAt = deletedAt + EXPORT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+                      const msLeft = expiresAt - Date.now();
+                      const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+                      const isExpired = msLeft <= 0;
                       return (
                         <div key={exp.id} className="panel" style={{ display: 'grid', gap: 6 }}>
                           <div style={{ fontSize: 14 }}>
@@ -685,7 +771,30 @@ export default async function AdminPage({ searchParams }: Props) {
                             Удалено: {new Date(exp.deletedAt).toLocaleString('ru-RU')}
                           </div>
                           <div className="muted" style={{ fontSize: 12 }}>
+                            {isExpired ? 'Срок хранения истёк' : `Можно восстановить: ${daysLeft} дн.`}
+                          </div>
+                          <div className="muted" style={{ fontSize: 12 }}>
                             Клиент: {exp.clientName || '—'} • Контакт: {exp.clientContact || '—'}
+                          </div>
+                          <div className="hero__actions" style={{ justifyContent: 'flex-start' }}>
+                            {!isExpired ? (
+                              <form method="post" action="/yakauleu/api/exports/restore">
+                                <input type="hidden" name="id" value={exp.id} />
+                                <input type="hidden" name="tab" value="archive" />
+                                <input type="hidden" name="section" value="exports" />
+                                <button className="btn btn--secondary" type="submit">
+                                  Восстановить
+                                </button>
+                              </form>
+                            ) : null}
+                            <form method="post" action="/yakauleu/api/exports/purge">
+                              <input type="hidden" name="id" value={exp.id} />
+                              <input type="hidden" name="tab" value="archive" />
+                              <input type="hidden" name="section" value="exports" />
+                              <button className="btn btn--ghost" type="submit">
+                                Удалить навсегда
+                              </button>
+                            </form>
                           </div>
                         </div>
                       );

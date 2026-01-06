@@ -882,27 +882,73 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     [fontCacheVersion, loadedFont]
   );
 
-  const layerCoverage = new Map<string, number>();
-  for (const layer of activeLayersSnapshot) {
-    const fontData = getFontForLayer(layer);
-    layerCoverage.set(layer.id, estimateCoverageFromFont(layer.text, fontData?.font));
-  }
+  const estimateLayerSize = useCallback(
+    (layer: TextLayer) => {
+      const metrics = layerMetrics[layer.id];
+      if (metrics) return { w: metrics.w, h: metrics.h };
+      const sanitized = sanitizeText(layer.text);
+      if (!sanitized.trim()) return { w: 0, h: 0 };
+      const lines = sanitized.split('\n');
+      const lineHeight = layer.fontSizePx * (layer.lineHeightMult ?? 1.15);
+      const fontData = getFontForLayer(layer);
+      const font = fontData?.font;
+      let w = 0;
+      if (font?.unitsPerEm) {
+        const scale = layer.fontSizePx / font.unitsPerEm;
+        const widths = lines.map((line) => measureLineWidth(font, line, scale, layer.letterSpacing));
+        w = Math.max(1, ...widths);
+      } else {
+        const approxChar = layer.fontSizePx * 0.6;
+        w = Math.max(
+          1,
+          ...lines.map((line) => {
+            const count = line.length;
+            if (!count) return 0;
+            return count * approxChar + Math.max(0, count - 1) * layer.letterSpacing;
+          })
+        );
+      }
+      const h = Math.max(1, layer.fontSizePx + Math.max(0, lines.length - 1) * lineHeight);
+      return { w, h };
+    },
+    [getFontForLayer, layerMetrics]
+  );
 
-  let areaCm2 = 0;
-  for (const layer of activeLayersSnapshot) {
-    const metrics = layerMetrics[layer.id];
-    if (!metrics) continue;
-    const layerArea = (metrics.w / pxPerCm) * (metrics.h / pxPerCm);
-    const coverage = layerCoverage.get(layer.id) ?? DEFAULT_COVERAGE_FACTOR;
-    areaCm2 += layerArea * coverage;
-  }
-  areaCm2 = Math.max(0, areaCm2);
+  const estimateLayerAreaCm2 = useCallback(
+    (layer: TextLayer) => {
+      const size = estimateLayerSize(layer);
+      if (!size.w || !size.h) return 0;
+      const fontData = getFontForLayer(layer);
+      const coverage = estimateCoverageFromFont(layer.text, fontData?.font);
+      const layerArea = (size.w / pxPerCm) * (size.h / pxPerCm);
+      return layerArea * coverage;
+    },
+    [estimateLayerSize, getFontForLayer, pxPerCm]
+  );
 
-  const weightG = areaCm2 * material.gPerCm2;
+  const viewWeights = useMemo(() => {
+    const result: Record<string, { areaCm2: number; weightG: number }> = {};
+    for (const viewKey of exportViewKeys) {
+      const layers = layersByViewSnapshot[viewKey] ?? [];
+      let areaCm2 = 0;
+      for (const layer of layers) {
+        areaCm2 += estimateLayerAreaCm2(layer);
+      }
+      areaCm2 = Math.max(0, areaCm2);
+      result[viewKey] = { areaCm2, weightG: areaCm2 * material.gPerCm2 };
+    }
+    return result;
+  }, [estimateLayerAreaCm2, exportViewKeys, layersByViewSnapshot, material.gPerCm2]);
+
+  const totalAreaCm2 = useMemo(
+    () => Object.values(viewWeights).reduce((sum, view) => sum + view.areaCm2, 0),
+    [viewWeights]
+  );
+  const totalWeightG = useMemo(() => totalAreaCm2 * material.gPerCm2, [material.gPerCm2, totalAreaCm2]);
 
   const payloadLimit = PAYLOAD_LIMIT_G[product][sizeCm] ?? 1.0;
   const hasPayloadLimit = Number.isFinite(payloadLimit);
-  const payloadOk = !hasPayloadLimit || weightG <= payloadLimit;
+  const payloadOk = !hasPayloadLimit || totalWeightG <= payloadLimit;
 
   const corners = useMemo((): Point[] => {
     const x0 = pos.x + bbox.offsetX;
@@ -1645,6 +1691,9 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
           : BOX_SIDES.find((side) => side.id === viewKey)?.label ??
           FOIL_SIDES.find((side) => side.id === viewKey)?.label ??
           viewKey;
+      const viewStats = viewWeights[viewKey];
+      const areaCm2 = viewStats ? Number(viewStats.areaCm2.toFixed(1)) : 0;
+      const weightG = viewStats ? Number(viewStats.weightG.toFixed(2)) : 0;
       const layers = (layersByViewSnapshot[viewKey] ?? []).map((layer) => {
         const metrics = layerMetrics[layer.id];
         const widthCm = metrics ? Number((metrics.w / pxPerCm).toFixed(1)) : null;
@@ -1662,7 +1711,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
           heightCm
         };
       });
-      return { id: viewKey, label: viewLabel, layers };
+      return { id: viewKey, label: viewLabel, areaCm2, weightG, layers };
     });
 
     return {
@@ -1670,9 +1719,24 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       clientContact: clientContact.trim(),
       product,
       sizeCm,
+      totalAreaCm2: Number(totalAreaCm2.toFixed(1)),
+      totalWeightG: Number(totalWeightG.toFixed(2)),
       views
     };
-  }, [clientContact, clientName, exportViewKeys, getLayerFontLabel, layerMetrics, layersByViewSnapshot, pxPerCm, product, sizeCm]);
+  }, [
+    clientContact,
+    clientName,
+    exportViewKeys,
+    getLayerFontLabel,
+    layerMetrics,
+    layersByViewSnapshot,
+    pxPerCm,
+    product,
+    sizeCm,
+    totalAreaCm2,
+    totalWeightG,
+    viewWeights
+  ]);
 
   const hasMultipleViews = exportViewKeys.length > 1;
   const canExportFonts = hasMultipleViews ? canExportCurvesAllViews : canExportCurves;
@@ -1692,6 +1756,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     if (pendingExport) setPendingExport(false);
     const { fontId, fontName, color: exportColor } = exportMeta;
     let viewExports: Array<{ view: string; svg: string; dxf: string }> | undefined;
+    const primaryView = hasMultipleViews ? activeViewKey : '';
 
     if (hasMultipleViews) {
       for (const viewKey of exportViewKeys) {
@@ -1717,7 +1782,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         details: exportDetails,
         svg: payload.svg,
         dxf: payload.dxf,
-        ...(viewExports?.length ? { viewExports } : {})
+        ...(viewExports?.length ? { viewExports, primaryView } : {})
       };
       await fetch('/api/inscription/export', {
         method: 'POST',
@@ -1728,6 +1793,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       // ignore upload errors for now
     }
   }, [
+    activeViewKey,
     buildCurvesPayload,
     buildCurvesPayloadForLayers,
     canExportFonts,
@@ -1781,7 +1847,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       layers,
       focusLayerId: activeLayerIdByView[viewKey]
     });
-    const dataUrl = await svgToPngDataUrl(svg, 1200, 1200, { title: getViewLabel(viewKey) });
+    const title = viewKey === 'main' ? '' : getViewLabel(viewKey);
+    const dataUrl = await svgToPngDataUrl(svg, 1200, 1200, { title });
     const res = await fetch(dataUrl);
     const blob = await res.blob();
     downloadBlob(`${fileBase}${viewSuffix(viewKey)}.png`, blob);
@@ -2036,7 +2103,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
             <div className="kpi">
               <div className="kpi__label">Площадь (суммарно)</div>
-              <div className="kpi__value">{areaCm2.toFixed(1)} см²</div>
+              <div className="kpi__value">{totalAreaCm2.toFixed(1)} см²</div>
             </div>
 
             <div className="kpi">
@@ -2059,12 +2126,12 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
               <div className="kpi__value">
                 {hasPayloadLimit ? (
                   <>
-                    {weightG.toFixed(2)} г / лимит {payloadLimit.toFixed(2)} г{' '}
+                    {totalWeightG.toFixed(2)} г / лимит {payloadLimit.toFixed(2)} г{' '}
                     {payloadOk ? <span className="ok">OK</span> : <span className="bad">Слишком много</span>}
                   </>
                 ) : (
                   <>
-                    {weightG.toFixed(2)} г / без лимита <span className="ok">OK</span>
+                    {totalWeightG.toFixed(2)} г / без лимита <span className="ok">OK</span>
                   </>
                 )}
               </div>

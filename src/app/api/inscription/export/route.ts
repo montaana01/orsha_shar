@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
     const detailsJson = detailsRaw ? JSON.stringify(detailsRaw) : '';
     const viewExportsRaw = Array.isArray(payload.viewExports) ? payload.viewExports : [];
     const viewExports: Array<{ view: string; svg: string; dxf: string }> = [];
+    const primaryViewRaw = String(payload.primaryView ?? '');
 
     if (!sessionIdRaw || !projectId || !product || !sizeCm || !svg || !dxf || !fontName || !color) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
@@ -48,6 +49,14 @@ export async function POST(request: NextRequest) {
 
     if (viewExportsRaw.length > MAX_VIEW_EXPORTS) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    let primaryView = '';
+    if (primaryViewRaw) {
+      if (!isSafePathSegment(primaryViewRaw, 40)) {
+        return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+      }
+      primaryView = primaryViewRaw;
     }
 
     let viewChars = 0;
@@ -93,25 +102,28 @@ export async function POST(request: NextRequest) {
 
     const sessionId = safeSegment(sessionIdRaw);
     const exportId = crypto.randomBytes(10).toString('hex');
+    const usePrimaryView = Boolean(primaryView && viewExports.some((entry) => entry.view === primaryView));
 
     const dir = path.join(process.cwd(), 'storage', 'exports', sessionId);
     await ensureDir(dir);
 
-    const svgPath = path.join(dir, `${exportId}.svg`);
-    const dxfPath = path.join(dir, `${exportId}.dxf`);
+    const primaryFileTag = usePrimaryView ? `${exportId}-${primaryView}` : exportId;
+    const svgPath = path.join(dir, `${primaryFileTag}.svg`);
+    const dxfPath = path.join(dir, `${primaryFileTag}.dxf`);
 
     await writeFileSafe(svgPath, Buffer.from(svg, 'utf8'));
     await writeFileSafe(dxfPath, Buffer.from(dxf, 'utf8'));
 
     for (const entry of viewExports) {
+      if (usePrimaryView && entry.view === primaryView) continue;
       const viewSvgPath = path.join(dir, `${exportId}-${entry.view}.svg`);
       const viewDxfPath = path.join(dir, `${exportId}-${entry.view}.dxf`);
       await writeFileSafe(viewSvgPath, Buffer.from(entry.svg, 'utf8'));
       await writeFileSafe(viewDxfPath, Buffer.from(entry.dxf, 'utf8'));
     }
 
-    const relSvg = path.posix.join(sessionId, `${exportId}.svg`);
-    const relDxf = path.posix.join(sessionId, `${exportId}.dxf`);
+    const relSvg = path.posix.join(sessionId, `${primaryFileTag}.svg`);
+    const relDxf = path.posix.join(sessionId, `${primaryFileTag}.dxf`);
 
     await execute(
       'INSERT INTO inscription_exports (session_id, export_id, project_hash, product, size_cm, font_id, font_name, color, client_name, client_contact, details_json, svg_path, dxf_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
