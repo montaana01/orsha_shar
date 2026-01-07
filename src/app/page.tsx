@@ -63,8 +63,10 @@ export default async function HomePage() {
                 width={1400}
                 height={1000}
                 priority
+                fetchPriority="high"
                 className="hero__img"
-                sizes="(max-width: 980px) 100vw, 1120px"
+                sizes="(max-width: 980px) 100vw, 532px"
+                quality={70}
               />
             </div>
           </div>

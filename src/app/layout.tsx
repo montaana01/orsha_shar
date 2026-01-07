@@ -48,9 +48,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="ru" data-scroll-behavior="smooth">
       <head>
         <meta name="apple-mobile-web-app-title" content="Орша Шар" />
+        <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://www.google-analytics.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://mc.yandex.ru" crossOrigin="anonymous" />
       </head>
       <body className="app">
-        <Script id="google-tag-manager" strategy="afterInteractive">
+        <Script id="google-tag-manager" strategy="lazyOnload">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
@@ -63,7 +66,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
               '<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-N8RX75N9" height="0" width="0" style="display:none;visibility:hidden"></iframe>'
           }}
         />
-        <Script id="yandex-metrika" strategy="afterInteractive">
+        <Script id="yandex-metrika" strategy="lazyOnload">
           {`(function(m,e,t,r,i,k,a){
     m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
     m[i].l=1*new Date();
@@ -73,8 +76,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 ym(72543040, 'init', {webvisor:true, clickmap:true, accurateTrackBounce:true, trackLinks:true});`}
         </Script>
-        <Script src="https://www.googletagmanager.com/gtag/js?id=G-NZQNHDRLX7" strategy="afterInteractive" />
-        <Script id="google-gtag" strategy="afterInteractive">
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-NZQNHDRLX7" strategy="lazyOnload" />
+        <Script id="google-gtag" strategy="lazyOnload">
           {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());

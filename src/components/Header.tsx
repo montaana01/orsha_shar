@@ -39,7 +39,7 @@ export function Header({ categories }: { categories: Category[] }) {
       <div className="container header__inner">
         <Link href="/" className="header__brand" aria-label={`${site.name} — главная`}>
           <span className="header__mark" aria-hidden="true">
-            <Image src="/assets/orsha-shar.webp" alt="Orsha-shar" width={60} height={60} priority />
+            <Image src="/assets/orsha-shar.webp" alt="Orsha-shar" width={60} height={60} sizes="60px" quality={60} priority />
           </span>
           <span className="header__brandText">
             <span className="header__brandName">{site.name}</span>
