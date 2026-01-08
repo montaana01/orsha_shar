@@ -13,7 +13,7 @@ import {
   PRODUCT_FILE_LABEL,
   PRODUCT_LABEL,
   PRODUCT_SIZES_CM,
-  type ProductType
+  type ProductType,
 } from '@/content/inscription';
 import type { ColorPreset, FontPreset } from '@/lib/data';
 import { fnv1a } from '@/lib/hash';
@@ -27,11 +27,11 @@ const BOX_SIDES = [
   { id: 'front', label: 'Передняя' },
   { id: 'right', label: 'Правая' },
   { id: 'back', label: 'Задняя' },
-  { id: 'left', label: 'Левая' }
+  { id: 'left', label: 'Левая' },
 ] as const;
 const FOIL_SIDES = [
   { id: 'foil-front', label: 'Лицевая' },
-  { id: 'foil-back', label: 'Обратная' }
+  { id: 'foil-back', label: 'Обратная' },
 ] as const;
 
 type BoxSide = (typeof BOX_SIDES)[number]['id'];
@@ -147,7 +147,10 @@ function pathArea(commands: OpenTypePathCommand[]): number {
   return Math.abs(sum);
 }
 
-function estimateGlyphArea(glyph: { getPath?: (x: number, y: number, fontSize: number) => OpenTypePath }, unitsPerEm: number): number {
+function estimateGlyphArea(
+  glyph: { getPath?: (x: number, y: number, fontSize: number) => OpenTypePath },
+  unitsPerEm: number,
+): number {
   if (!glyph.getPath) return 0;
   const path = glyph.getPath(0, 0, unitsPerEm);
   if (!path?.commands?.length) return 0;
@@ -196,7 +199,7 @@ async function svgToPngDataUrl(
   svgText: string,
   wPx: number,
   hPx: number,
-  opts?: { title?: string; titleHeight?: number }
+  opts?: { title?: string; titleHeight?: number },
 ): Promise<string> {
   const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
   const svgUrl = URL.createObjectURL(svgBlob);
@@ -206,8 +209,18 @@ async function svgToPngDataUrl(
   img.src = svgUrl;
 
   await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error('Failed to render SVG'));
+    const handleLoad = () => {
+      img.removeEventListener('load', handleLoad);
+      img.removeEventListener('error', handleError);
+      resolve();
+    };
+    const handleError = () => {
+      img.removeEventListener('load', handleLoad);
+      img.removeEventListener('error', handleError);
+      reject(new Error('Failed to render SVG'));
+    };
+    img.addEventListener('load', handleLoad);
+    img.addEventListener('error', handleError);
   });
 
   const title = opts?.title?.trim();
@@ -281,7 +294,9 @@ function estimateCoverageFromFont(text: string, font: any): number {
   if (!stripped) return DEFAULT_COVERAGE_FACTOR;
   const unitsPerEm = font.unitsPerEm || 1000;
   const emHeight =
-    typeof font.ascender === 'number' && typeof font.descender === 'number' ? font.ascender - font.descender : unitsPerEm;
+    typeof font.ascender === 'number' && typeof font.descender === 'number'
+      ? font.ascender - font.descender
+      : unitsPerEm;
   const cache = GLYPH_AREA_CACHE.get(font) ?? new Map<string, number>();
   if (!GLYPH_AREA_CACHE.has(font)) GLYPH_AREA_CACHE.set(font, cache);
   let sum = 0;
@@ -354,7 +369,13 @@ type FontOption = {
   source: 'db' | 'fallback';
 };
 
-export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colors: ColorPreset[] }) {
+export function InscriptionClient({
+  fonts,
+  colors,
+}: {
+  fonts: FontPreset[];
+  colors: ColorPreset[];
+}) {
   const fontOptions: FontOption[] = useMemo(() => {
     const fallbackFonts = FONT_PRESETS.map((font) => ({
       id: font.id,
@@ -362,7 +383,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       css: font.css,
       fileUrl: font.fileUrl,
       fileName: font.fileName,
-      source: 'fallback' as const
+      source: 'fallback' as const,
     }));
     const dbFonts = fonts.map((font) => ({
       id: String(font.id),
@@ -370,7 +391,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       css: `'${font.name.replace(/'/g, "\\'")}', system-ui, -apple-system, Segoe UI, Roboto, Arial`,
       fileUrl: font.fileUrl,
       fileName: font.fileName,
-      source: 'db' as const
+      source: 'db' as const,
     }));
 
     const merged = [...fallbackFonts, ...dbFonts];
@@ -412,7 +433,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       lineHeightMult: 1.15,
       letterSpacing: 0,
       color: defaultColor,
-      pos: { x: CANVAS_PX / 2, y: CANVAS_PX / 2 }
+      pos: { x: CANVAS_PX / 2, y: CANVAS_PX / 2 },
     });
 
     const main = [createLayer(1)];
@@ -423,7 +444,15 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     const foilFront = [createLayer(1)];
     const foilBack = [createLayer(1)];
     return {
-      layersByView: { main, front, right, back, left, 'foil-front': foilFront, 'foil-back': foilBack },
+      layersByView: {
+        main,
+        front,
+        right,
+        back,
+        left,
+        'foil-front': foilFront,
+        'foil-back': foilBack,
+      },
       activeLayerIdByView: {
         main: main[0].id,
         front: front[0].id,
@@ -431,8 +460,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         back: back[0].id,
         left: left[0].id,
         'foil-front': foilFront[0].id,
-        'foil-back': foilBack[0].id
-      }
+        'foil-back': foilBack[0].id,
+      },
     };
   }, [defaultColor, defaultFontPresetId, defaultLayerText]);
 
@@ -448,8 +477,12 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   const [pos, setPos] = useState<{ x: number; y: number }>({ x: CANVAS_PX / 2, y: CANVAS_PX / 2 });
   const [boxSide, setBoxSide] = useState<BoxSide>('front');
   const [foilSide, setFoilSide] = useState<FoilSide>('foil-front');
-  const [layersByView, setLayersByView] = useState<Record<string, TextLayer[]>>(initViews.layersByView);
-  const [activeLayerIdByView, setActiveLayerIdByView] = useState<Record<string, string>>(initViews.activeLayerIdByView);
+  const [layersByView, setLayersByView] = useState<Record<string, TextLayer[]>>(
+    initViews.layersByView,
+  );
+  const [activeLayerIdByView, setActiveLayerIdByView] = useState<Record<string, string>>(
+    initViews.activeLayerIdByView,
+  );
   const [clientName, setClientName] = useState<string>('');
   const [clientContact, setClientContact] = useState<string>('');
   const [clientModalOpen, setClientModalOpen] = useState<boolean>(true);
@@ -471,7 +504,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     w: 260,
     h: 90,
     offsetX: -130,
-    offsetY: -45
+    offsetY: -45,
   });
 
   const shape = useMemo(() => getShape(product, CANVAS_PX), [product]);
@@ -483,7 +516,10 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
   const isFoilProduct = FOIL_PRODUCTS.has(product);
   const activeViewKey = product === 'box' ? boxSide : isFoilProduct ? foilSide : 'main';
-  const activeViewLayers = useMemo(() => layersByView[activeViewKey] ?? [], [activeViewKey, layersByView]);
+  const activeViewLayers = useMemo(
+    () => layersByView[activeViewKey] ?? [],
+    [activeViewKey, layersByView],
+  );
   const activeLayerId = activeLayerIdByView[activeViewKey] ?? activeViewLayers[0]?.id ?? '';
   const exportViewKeys = useMemo(() => {
     if (product === 'box') return BOX_SIDES.map((side) => side.id);
@@ -501,9 +537,19 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       lineHeightMult,
       letterSpacing,
       color,
-      pos: { ...pos }
+      pos: { ...pos },
     }),
-    [activeLayerId, color, fontPresetId, fontSizePx, layerName, letterSpacing, lineHeightMult, pos, text]
+    [
+      activeLayerId,
+      color,
+      fontPresetId,
+      fontSizePx,
+      layerName,
+      letterSpacing,
+      lineHeightMult,
+      pos,
+      text,
+    ],
   );
 
   const activeLayersSnapshot = useMemo(() => {
@@ -518,7 +564,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   const layersByViewSnapshot = useMemo(() => {
     return {
       ...layersByView,
-      [activeViewKey]: activeLayersSnapshot
+      [activeViewKey]: activeLayersSnapshot,
     };
   }, [activeLayersSnapshot, activeViewKey, layersByView]);
 
@@ -547,7 +593,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         return { ...prev, [viewKey]: nextViewLayers };
       });
     },
-    [activeLayerId, activeLayerSnapshot]
+    [activeLayerId, activeLayerSnapshot],
   );
 
   const selectView = useCallback(
@@ -563,7 +609,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         setPos({ x: CANVAS_PX / 2, y: CANVAS_PX / 2 });
       }
     },
-    [activeLayerIdByView, activeViewKey, applyLayerToState, commitActiveLayer, layersByView]
+    [activeLayerIdByView, activeViewKey, applyLayerToState, commitActiveLayer, layersByView],
   );
 
   const selectLayer = useCallback(
@@ -575,7 +621,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       setActiveLayerIdByView((prev) => ({ ...prev, [activeViewKey]: layerId }));
       applyLayerToState(target);
     },
-    [activeLayerId, activeLayersSnapshot, activeViewKey, applyLayerToState, commitActiveLayer]
+    [activeLayerId, activeLayersSnapshot, activeViewKey, applyLayerToState, commitActiveLayer],
   );
 
   const createLayer = useCallback(
@@ -588,16 +634,16 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       lineHeightMult,
       letterSpacing,
       color,
-      pos: { x: CANVAS_PX / 2, y: CANVAS_PX / 2 }
+      pos: { x: CANVAS_PX / 2, y: CANVAS_PX / 2 },
     }),
-    [color, fontPresetId, fontSizePx, letterSpacing, lineHeightMult]
+    [color, fontPresetId, fontSizePx, letterSpacing, lineHeightMult],
   );
 
   const addLayer = useCallback(() => {
     const next = createLayer(activeLayersSnapshot.length + 1);
     setLayersByView((prev) => ({
       ...prev,
-      [activeViewKey]: [...activeLayersSnapshot, next]
+      [activeViewKey]: [...activeLayersSnapshot, next],
     }));
     setActiveLayerIdByView((prev) => ({ ...prev, [activeViewKey]: next.id }));
     applyLayerToState(next);
@@ -610,7 +656,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     const nextActive = remaining[Math.max(0, idx - 1)] ?? remaining[0];
     setLayersByView((prev) => ({
       ...prev,
-      [activeViewKey]: remaining
+      [activeViewKey]: remaining,
     }));
     if (nextActive) {
       setActiveLayerIdByView((prev) => ({ ...prev, [activeViewKey]: nextActive.id }));
@@ -625,7 +671,10 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     applyLayerToState(first);
   }, [activeLayerId, activeViewKey, activeViewLayers, applyLayerToState]);
 
-  const selectedFont = useMemo(() => fontOptions.find((font) => font.id === fontPresetId) ?? fontOptions[0], [fontOptions, fontPresetId]);
+  const selectedFont = useMemo(
+    () => fontOptions.find((font) => font.id === fontPresetId) ?? fontOptions[0],
+    [fontOptions, fontPresetId],
+  );
 
   const fontCss = useMemo(() => {
     if (fontPresetId === 'uploaded' && loadedFont) {
@@ -653,7 +702,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
   }, [layersByViewSnapshot]);
 
   const activeFontData =
-    fontPresetId === 'uploaded' ? loadedFont : fontCacheRef.current.get(fontPresetId) ?? null;
+    fontPresetId === 'uploaded' ? loadedFont : (fontCacheRef.current.get(fontPresetId) ?? null);
 
   useEffect(() => {
     if (!fontOptions.length) return;
@@ -686,7 +735,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       const next: Record<string, TextLayer[]> = {};
       for (const [viewKey, viewLayers] of Object.entries(prev)) {
         const updated = viewLayers.map((layer) => {
-          if (colorOptions.find((c) => c.value.toLowerCase() === layer.color.toLowerCase())) return layer;
+          if (colorOptions.find((c) => c.value.toLowerCase() === layer.color.toLowerCase()))
+            return layer;
           changed = true;
           return { ...layer, color: defaultColor };
         });
@@ -726,7 +776,10 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     const key = 'inscription_session';
     let id = window.localStorage.getItem(key);
     if (!id) {
-      id = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `sess-${Math.random().toString(36).slice(2, 10)}`;
+      id =
+        typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `sess-${Math.random().toString(36).slice(2, 10)}`;
       window.localStorage.setItem(key, id);
     }
     setExportSessionId(id);
@@ -800,7 +853,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             name: font.label,
             fileName: font.fileName ?? font.label,
             arrayBuffer: buf,
-            font: parsed
+            font: parsed,
           });
           setFontCacheVersion((v) => v + 1);
         } catch {
@@ -833,7 +886,9 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       return;
     }
 
-    const unsupported = cyrillicChars.filter((ch) => !document.fonts.check(`${fontSizePx}px ${fontCss}`, ch));
+    const unsupported = cyrillicChars.filter(
+      (ch) => !document.fonts.check(`${fontSizePx}px ${fontCss}`, ch),
+    );
     setCyrillicStatus({ unsupported, mode: 'browser' });
   }, [activeFontData, cyrillicChars, fontCss, fontPresetId, fontSizePx]);
 
@@ -851,7 +906,13 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         const offsetX = b.x - layer.pos.x;
         const offsetY = b.y - layer.pos.y;
         const prevMetric = prev[layer.id];
-        if (!prevMetric || prevMetric.w !== w || prevMetric.h !== h || prevMetric.offsetX !== offsetX || prevMetric.offsetY !== offsetY) {
+        if (
+          !prevMetric ||
+          prevMetric.w !== w ||
+          prevMetric.h !== h ||
+          prevMetric.offsetX !== offsetX ||
+          prevMetric.offsetY !== offsetY
+        ) {
           next[layer.id] = { w, h, offsetX, offsetY };
           changed = true;
         }
@@ -865,7 +926,13 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     const next = layerMetrics[activeLayerId];
     if (!next) return;
     setBbox((prev) => {
-      if (prev.w === next.w && prev.h === next.h && prev.offsetX === next.offsetX && prev.offsetY === next.offsetY) return prev;
+      if (
+        prev.w === next.w &&
+        prev.h === next.h &&
+        prev.offsetX === next.offsetX &&
+        prev.offsetY === next.offsetY
+      )
+        return prev;
       return next;
     });
   }, [activeLayerId, layerMetrics]);
@@ -879,7 +946,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       if (fontCacheVersion === 0) return null;
       return fontCacheRef.current.get(layer.fontPresetId) ?? null;
     },
-    [fontCacheVersion, loadedFont]
+    [fontCacheVersion, loadedFont],
   );
 
   const estimateLayerSize = useCallback(
@@ -895,7 +962,9 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       let w = 0;
       if (font?.unitsPerEm) {
         const scale = layer.fontSizePx / font.unitsPerEm;
-        const widths = lines.map((line) => measureLineWidth(font, line, scale, layer.letterSpacing));
+        const widths = lines.map((line) =>
+          measureLineWidth(font, line, scale, layer.letterSpacing),
+        );
         w = Math.max(1, ...widths);
       } else {
         const approxChar = layer.fontSizePx * 0.6;
@@ -905,13 +974,13 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             const count = line.length;
             if (!count) return 0;
             return count * approxChar + Math.max(0, count - 1) * layer.letterSpacing;
-          })
+          }),
         );
       }
       const h = Math.max(1, layer.fontSizePx + Math.max(0, lines.length - 1) * lineHeight);
       return { w, h };
     },
-    [getFontForLayer, layerMetrics]
+    [getFontForLayer, layerMetrics],
   );
 
   const estimateLayerAreaCm2 = useCallback(
@@ -923,7 +992,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       const layerArea = (size.w / pxPerCm) * (size.h / pxPerCm);
       return layerArea * coverage;
     },
-    [estimateLayerSize, getFontForLayer, pxPerCm]
+    [estimateLayerSize, getFontForLayer, pxPerCm],
   );
 
   const viewWeights = useMemo(() => {
@@ -942,9 +1011,12 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
   const totalAreaCm2 = useMemo(
     () => Object.values(viewWeights).reduce((sum, view) => sum + view.areaCm2, 0),
-    [viewWeights]
+    [viewWeights],
   );
-  const totalWeightG = useMemo(() => totalAreaCm2 * material.gPerCm2, [material.gPerCm2, totalAreaCm2]);
+  const totalWeightG = useMemo(
+    () => totalAreaCm2 * material.gPerCm2,
+    [material.gPerCm2, totalAreaCm2],
+  );
 
   const payloadLimit = PAYLOAD_LIMIT_G[product][sizeCm] ?? 1.0;
   const hasPayloadLimit = Number.isFinite(payloadLimit);
@@ -957,7 +1029,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       { x: x0, y: y0 },
       { x: x0 + bbox.w, y: y0 },
       { x: x0 + bbox.w, y: y0 + bbox.h },
-      { x: x0, y: y0 + bbox.h }
+      { x: x0, y: y0 + bbox.h },
     ];
   }, [bbox.h, bbox.offsetX, bbox.offsetY, bbox.w, pos.x, pos.y]);
 
@@ -972,7 +1044,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       w,
       h,
       offsetX: bbox.offsetX - pad - (w - rawW) / 2,
-      offsetY: bbox.offsetY - pad - (h - rawH) / 2
+      offsetY: bbox.offsetY - pad - (h - rawH) / 2,
     };
   }, [bbox.h, bbox.offsetX, bbox.offsetY, bbox.w, isCoarsePointer]);
 
@@ -984,7 +1056,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         { x: x0, y: y0 },
         { x: x0 + bbox.w, y: y0 },
         { x: x0 + bbox.w, y: y0 + bbox.h },
-        { x: x0, y: y0 + bbox.h }
+        { x: x0, y: y0 + bbox.h },
       ];
 
       if (shape.kind === 'circle') {
@@ -994,7 +1066,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
       return pts.every((p) => pointInPolygon(shape.safePoints, p));
     },
-    [bbox.h, bbox.offsetX, bbox.offsetY, bbox.w, shape]
+    [bbox.h, bbox.offsetX, bbox.offsetY, bbox.w, shape],
   );
 
   const insideNow = useMemo(() => isInsideSafe(pos.x, pos.y), [isInsideSafe, pos.x, pos.y]);
@@ -1009,7 +1081,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         { x: x0, y: y0 },
         { x: x0 + metrics.w, y: y0 },
         { x: x0 + metrics.w, y: y0 + metrics.h },
-        { x: x0, y: y0 + metrics.h }
+        { x: x0, y: y0 + metrics.h },
       ];
 
       if (shape.kind === 'circle') {
@@ -1019,12 +1091,12 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
       return pts.every((p) => pointInPolygon(shape.safePoints, p));
     },
-    [layerMetrics, shape]
+    [layerMetrics, shape],
   );
 
   const hasLayerMetrics = useMemo(
     () => activeLayersSnapshot.every((layer) => Boolean(layerMetrics[layer.id])),
-    [activeLayersSnapshot, layerMetrics]
+    [activeLayersSnapshot, layerMetrics],
   );
 
   const allInsideSafe = useMemo(() => {
@@ -1065,7 +1137,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       }
       return best;
     },
-    [isInsideSafe, shape.cx, shape.cy]
+    [isInsideSafe, shape.cx, shape.cy],
   );
 
   // Ensure current pos stays valid when geometry changes
@@ -1084,7 +1156,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     if (!metrics) return;
     const target = {
       x: shape.cx - (metrics.offsetX + metrics.w / 2),
-      y: shape.cy - (metrics.offsetY + metrics.h / 2)
+      y: shape.cy - (metrics.offsetY + metrics.h / 2),
     };
     setPos((prev) => {
       if (Math.abs(prev.x - target.x) < 0.5 && Math.abs(prev.y - target.y) < 0.5) return prev;
@@ -1183,7 +1255,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
           { x: x0, y: y0 },
           { x: x0 + w, y: y0 },
           { x: x0 + w, y: y0 + h },
-          { x: x0, y: y0 + h }
+          { x: x0, y: y0 + h },
         ];
 
         if (shape.kind === 'circle') {
@@ -1218,7 +1290,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     const cand = { x: p.x - drag.current.dx, y: p.y - drag.current.dy };
     const bounded = {
       x: clamp(cand.x, 24, CANVAS_PX - 24),
-      y: clamp(cand.y, 24, CANVAS_PX - 24)
+      y: clamp(cand.y, 24, CANVAS_PX - 24),
     };
     setPos((prev) => {
       const next = constrainToSafe(bounded);
@@ -1264,13 +1336,14 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     const opentype = (await import('opentype.js')).default;
     const font = opentype.parse(buf) as OpenTypeFont;
 
-    const name = (font?.names?.fullName?.en as string) || file.name.replace(/\.(ttf|otf)$/i, '') || 'UserFont';
+    const name =
+      (font?.names?.fullName?.en as string) || file.name.replace(/\.(ttf|otf)$/i, '') || 'UserFont';
 
     setLoadedFont({
       name,
       fileName: file.name,
       arrayBuffer: buf,
-      font
+      font,
     });
     setFontPresetId('uploaded');
   };
@@ -1280,7 +1353,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       if (layer.fontPresetId === 'uploaded') return loadedFont?.name ?? 'Загруженный шрифт';
       return fontOptionsById.get(layer.fontPresetId)?.label ?? layer.fontPresetId;
     },
-    [fontOptionsById, loadedFont]
+    [fontOptionsById, loadedFont],
   );
 
   const getLayerFontCss = useCallback(
@@ -1292,7 +1365,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       const font = fontOptionsById.get(layer.fontPresetId);
       return font?.css ?? 'system-ui, -apple-system, Segoe UI, Roboto, Arial';
     },
-    [fontOptionsById, loadedFont]
+    [fontOptionsById, loadedFont],
   );
 
   const buildEmbeddedFontCss = useCallback(
@@ -1309,11 +1382,13 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         const mime = isOtf ? 'font/otf' : 'font/ttf';
         const fmt = isOtf ? 'opentype' : 'truetype';
         const b64 = arrayBufferToBase64(fontData.arrayBuffer);
-        rules.push(`@font-face { font-family: '${safeName}'; src: url('data:${mime};base64,${b64}') format('${fmt}'); }`);
+        rules.push(
+          `@font-face { font-family: '${safeName}'; src: url('data:${mime};base64,${b64}') format('${fmt}'); }`,
+        );
       }
       return rules.join('\n');
     },
-    [getFontForLayer]
+    [getFontForLayer],
   );
 
   const makeSvgText = useCallback(
@@ -1377,10 +1452,11 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     ]]></style>
   </defs>
   ${withGuides ? `<path d="${shape.outlinePath}" fill="none" stroke="${strokeColor}" stroke-width="2"/>` : ''}
-  ${safe
-          ? `<path d="${shape.safePath}" fill="none" stroke="rgba(43,91,210,0.35)" stroke-width="2" stroke-dasharray="10 8"/>`
-          : ''
-        }
+  ${
+    safe
+      ? `<path d="${shape.safePath}" fill="none" stroke="rgba(43,91,210,0.35)" stroke-width="2" stroke-dasharray="10 8"/>`
+      : ''
+  }
   ${texts}
   ${measure}
 </svg>`;
@@ -1395,8 +1471,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       shape.outlinePath,
       shape.safePath,
       showSafeZone,
-      sizeCm
-    ]
+      sizeCm,
+    ],
   );
 
   const importStateJson = async (file: File | null) => {
@@ -1417,7 +1493,12 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     if (s.clientName) setClientName(s.clientName);
     if (s.clientContact) setClientContact(s.clientContact);
     if (s.clientName && s.clientContact) setClientModalOpen(false);
-    const viewKey = s.product === 'box' ? s.boxSide ?? 'front' : FOIL_PRODUCTS.has(s.product) ? s.foilSide ?? 'foil-front' : 'main';
+    const viewKey =
+      s.product === 'box'
+        ? (s.boxSide ?? 'front')
+        : FOIL_PRODUCTS.has(s.product)
+          ? (s.foilSide ?? 'foil-front')
+          : 'main';
     let resolvedLayersByView: Record<string, TextLayer[]> = s.layersByView ?? {};
     let resolvedActiveByView: Record<string, string> = s.activeLayerIdByView ?? {};
 
@@ -1430,7 +1511,17 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         letterSpacing?: number;
         color?: string;
         pos?: { x: number; y: number };
-        boxSides?: Record<string, { text: string; fontPresetId: string; fontSizePx: number; letterSpacing: number; color: string; pos: { x: number; y: number } }>;
+        boxSides?: Record<
+          string,
+          {
+            text: string;
+            fontPresetId: string;
+            fontSizePx: number;
+            letterSpacing: number;
+            color: string;
+            pos: { x: number; y: number };
+          }
+        >;
       };
       const toLayer = (name: string, source?: typeof legacy): TextLayer => ({
         id: `layer-${Math.random().toString(36).slice(2, 10)}`,
@@ -1441,7 +1532,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         lineHeightMult: source?.lineHeightMult ?? 1.15,
         letterSpacing: source?.letterSpacing ?? 0,
         color: source?.color ?? defaultColor,
-        pos: source?.pos ?? { x: CANVAS_PX / 2, y: CANVAS_PX / 2 }
+        pos: source?.pos ?? { x: CANVAS_PX / 2, y: CANVAS_PX / 2 },
       });
 
       if (legacy.boxSides) {
@@ -1455,7 +1546,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
           front: front[0].id,
           right: right[0].id,
           back: back[0].id,
-          left: left[0].id
+          left: left[0].id,
         };
       } else {
         const main = [toLayer('Слой 1', legacy)];
@@ -1479,7 +1570,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       setActiveLayerIdByView((prev) => ({ ...prev, [viewKey]: activeLayer.id }));
       applyLayerToState({
         ...activeLayer,
-        lineHeightMult: activeLayer.lineHeightMult ?? 1.15
+        lineHeightMult: activeLayer.lineHeightMult ?? 1.15,
       });
     }
   };
@@ -1500,46 +1591,43 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     return true;
   }, [canExportCurves, exportViewKeys, getFontForLayer, layersByViewSnapshot]);
 
-  const buildTextPathD = useCallback(
-    (layer: TextLayer, fontData: LoadedFont) => {
-      const font = fontData.font;
-      const unitsPerEm = font.unitsPerEm || 1000;
-      const scale = layer.fontSizePx / unitsPerEm;
-      const asc = (font.ascender || unitsPerEm * 0.8) * scale;
-      const desc = (font.descender || -unitsPerEm * 0.2) * scale;
-      const emHeight = asc - desc;
-      const baselineCenterOffset = asc - emHeight / 2;
+  const buildTextPathD = useCallback((layer: TextLayer, fontData: LoadedFont) => {
+    const font = fontData.font;
+    const unitsPerEm = font.unitsPerEm || 1000;
+    const scale = layer.fontSizePx / unitsPerEm;
+    const asc = (font.ascender || unitsPerEm * 0.8) * scale;
+    const desc = (font.descender || -unitsPerEm * 0.2) * scale;
+    const emHeight = asc - desc;
+    const baselineCenterOffset = asc - emHeight / 2;
 
-      const lines = sanitizeText(layer.text).split('\n');
-      const lineHeight = layer.fontSizePx * (layer.lineHeightMult ?? 1.15);
+    const lines = sanitizeText(layer.text).split('\n');
+    const lineHeight = layer.fontSizePx * (layer.lineHeightMult ?? 1.15);
 
-      const startYCenter = layer.pos.y - ((lines.length - 1) * lineHeight) / 2;
+    const startYCenter = layer.pos.y - ((lines.length - 1) * lineHeight) / 2;
 
-      const widths = lines.map((line) => measureLineWidth(font, line, scale, layer.letterSpacing));
-      const maxW = Math.max(1, ...widths);
+    const widths = lines.map((line) => measureLineWidth(font, line, scale, layer.letterSpacing));
+    const maxW = Math.max(1, ...widths);
 
-      const paths: string[] = [];
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const lineW = widths[i];
-        const xStart = layer.pos.x - lineW / 2;
-        const yCenter = startYCenter + i * lineHeight;
-        const yBaseline = yCenter + baselineCenterOffset;
+    const paths: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lineW = widths[i];
+      const xStart = layer.pos.x - lineW / 2;
+      const yCenter = startYCenter + i * lineHeight;
+      const yBaseline = yCenter + baselineCenterOffset;
 
-        let x = xStart;
-        const glyphs = font.stringToGlyphs ? font.stringToGlyphs(line) : [];
-        for (const g of glyphs) {
-          const adv = (g.advanceWidth || unitsPerEm * 0.5) * scale;
-          const p = g.getPath(x, yBaseline, layer.fontSizePx);
-          paths.push(pathToD(p));
-          x += adv + layer.letterSpacing;
-        }
+      let x = xStart;
+      const glyphs = font.stringToGlyphs ? font.stringToGlyphs(line) : [];
+      for (const g of glyphs) {
+        const adv = (g.advanceWidth || unitsPerEm * 0.5) * scale;
+        const p = g.getPath(x, yBaseline, layer.fontSizePx);
+        paths.push(pathToD(p));
+        x += adv + layer.letterSpacing;
       }
+    }
 
-      return { d: paths.filter(Boolean).join(' '), approxW: maxW };
-    },
-    []
-  );
+    return { d: paths.filter(Boolean).join(' '), approxW: maxW };
+  }, []);
 
   const buildCurvesPayloadForLayers = useCallback(
     (layers: TextLayer[]) => {
@@ -1565,7 +1653,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             minX: shape.cx - shape.outerRadius,
             maxX: shape.cx + shape.outerRadius,
             minY: shape.cy - shape.outerRadius,
-            maxY: shape.cy + shape.outerRadius
+            maxY: shape.cy + shape.outerRadius,
           };
         }
         const xs = shape.outerPoints.map((p) => p.x);
@@ -1574,28 +1662,30 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
           minX: Math.min(...xs),
           maxX: Math.max(...xs),
           minY: Math.min(...ys),
-          maxY: Math.max(...ys)
+          maxY: Math.max(...ys),
         };
       })();
 
-      const textBounds = layers.reduce<{ minX: number; maxX: number; minY: number; maxY: number } | null>(
-        (acc, layer) => {
-          const metrics = layerMetrics[layer.id];
-          if (!metrics) return acc;
-          const x0 = layer.pos.x + metrics.offsetX;
-          const y0 = layer.pos.y + metrics.offsetY;
-          const x1 = x0 + metrics.w;
-          const y1 = y0 + metrics.h;
-          if (!acc) return { minX: x0, maxX: x1, minY: y0, maxY: y1 };
-          return {
-            minX: Math.min(acc.minX, x0),
-            maxX: Math.max(acc.maxX, x1),
-            minY: Math.min(acc.minY, y0),
-            maxY: Math.max(acc.maxY, y1)
-          };
-        },
-        null
-      );
+      const textBounds = layers.reduce<{
+        minX: number;
+        maxX: number;
+        minY: number;
+        maxY: number;
+      } | null>((acc, layer) => {
+        const metrics = layerMetrics[layer.id];
+        if (!metrics) return acc;
+        const x0 = layer.pos.x + metrics.offsetX;
+        const y0 = layer.pos.y + metrics.offsetY;
+        const x1 = x0 + metrics.w;
+        const y1 = y0 + metrics.h;
+        if (!acc) return { minX: x0, maxX: x1, minY: y0, maxY: y1 };
+        return {
+          minX: Math.min(acc.minX, x0),
+          maxX: Math.max(acc.maxX, x1),
+          minY: Math.min(acc.minY, y0),
+          maxY: Math.max(acc.maxY, y1),
+        };
+      }, null);
 
       const contentMaxY = Math.max(bounds.maxY, textBounds?.maxY ?? bounds.maxY);
       const measureY = contentMaxY + 18;
@@ -1603,7 +1693,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       const measureD = [
         `M ${bounds.minX} ${measureY} L ${bounds.maxX} ${measureY}`,
         `M ${bounds.minX} ${measureY - 6} L ${bounds.minX} ${measureY + 6}`,
-        `M ${bounds.maxX} ${measureY - 6} L ${bounds.maxX} ${measureY + 6}`
+        `M ${bounds.maxX} ${measureY - 6} L ${bounds.maxX} ${measureY + 6}`,
       ].join(' ');
 
       let labelD = '';
@@ -1618,7 +1708,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
           lineHeightMult: 1.1,
           letterSpacing: 0,
           color: '#000000',
-          pos: { x: (bounds.minX + bounds.maxX) / 2, y: labelY }
+          pos: { x: (bounds.minX + bounds.maxX) / 2, y: labelY },
         };
         const labelPath = buildTextPathD(labelLayer, labelFontData);
         labelD = labelPath?.d ?? '';
@@ -1629,7 +1719,10 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         const segments = 64;
         const pts = Array.from({ length: segments }, (_, i) => {
           const ang = (i / segments) * Math.PI * 2;
-          return { x: shape.cx + shape.outerRadius * Math.cos(ang), y: shape.cy + shape.outerRadius * Math.sin(ang) };
+          return {
+            x: shape.cx + shape.outerRadius * Math.cos(ang),
+            y: shape.cy + shape.outerRadius * Math.sin(ang),
+          };
         });
         return pointsToPath(pts);
       })();
@@ -1638,13 +1731,13 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       const dxf = pathsToDxf(
         [
           { d: combinedD, layer: 'CUT' },
-          ...(refPaths.length ? [{ d: refPaths.join(' '), layer: 'REF' }] : [])
+          ...(refPaths.length ? [{ d: refPaths.join(' '), layer: 'REF' }] : []),
         ],
-        mmPerPx * DXF_SCALE
+        mmPerPx * DXF_SCALE,
       );
       return { svg, dxf };
     },
-    [buildTextPathD, getFontForLayer, layerMetrics, mmPerPx, shape, sizeCm]
+    [buildTextPathD, getFontForLayer, layerMetrics, mmPerPx, shape, sizeCm],
   );
 
   const buildCurvesPayload = useCallback(() => {
@@ -1657,20 +1750,25 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       return { fontId: null, fontName: 'Unknown', color: defaultColor };
     }
 
-    const activeLayer = activeLayersSnapshot.find((layer) => layer.id === activeLayerId) ?? activeLayersSnapshot[0];
+    const activeLayer =
+      activeLayersSnapshot.find((layer) => layer.id === activeLayerId) ?? activeLayersSnapshot[0];
     const colorValue = /^#/.test(activeLayer.color) ? activeLayer.color : defaultColor;
     const fontIds = new Set(activeLayersSnapshot.map((layer) => layer.fontPresetId));
 
     if (fontIds.size === 1) {
       const onlyId = activeLayersSnapshot[0].fontPresetId;
       if (onlyId === 'uploaded') {
-        return { fontId: null, fontName: loadedFont?.name ?? 'Загруженный шрифт', color: colorValue };
+        return {
+          fontId: null,
+          fontName: loadedFont?.name ?? 'Загруженный шрифт',
+          color: colorValue,
+        };
       }
       const font = fontOptionsById.get(onlyId);
       return {
         fontId: font?.source === 'db' ? Number(font.id) : null,
         fontName: font?.label ?? 'Unknown',
-        color: colorValue
+        color: colorValue,
       };
     }
 
@@ -1688,9 +1786,9 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       const viewLabel =
         viewKey === 'main'
           ? 'Основная'
-          : BOX_SIDES.find((side) => side.id === viewKey)?.label ??
-          FOIL_SIDES.find((side) => side.id === viewKey)?.label ??
-          viewKey;
+          : (BOX_SIDES.find((side) => side.id === viewKey)?.label ??
+            FOIL_SIDES.find((side) => side.id === viewKey)?.label ??
+            viewKey);
       const viewStats = viewWeights[viewKey];
       const areaCm2 = viewStats ? Number(viewStats.areaCm2.toFixed(1)) : 0;
       const weightG = viewStats ? Number(viewStats.weightG.toFixed(2)) : 0;
@@ -1708,7 +1806,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
           letterSpacing: layer.letterSpacing,
           color: layer.color,
           widthCm,
-          heightCm
+          heightCm,
         };
       });
       return { id: viewKey, label: viewLabel, areaCm2, weightG, layers };
@@ -1721,7 +1819,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       sizeCm,
       totalAreaCm2: Number(totalAreaCm2.toFixed(1)),
       totalWeightG: Number(totalWeightG.toFixed(2)),
-      views
+      views,
     };
   }, [
     clientContact,
@@ -1735,7 +1833,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     sizeCm,
     totalAreaCm2,
     totalWeightG,
-    viewWeights
+    viewWeights,
   ]);
 
   const hasMultipleViews = exportViewKeys.length > 1;
@@ -1782,12 +1880,12 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         details: exportDetails,
         svg: payload.svg,
         dxf: payload.dxf,
-        ...(viewExports?.length ? { viewExports, primaryView } : {})
+        ...(viewExports?.length ? { viewExports, primaryView } : {}),
       };
       await fetch('/api/inscription/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
     } catch {
       // ignore upload errors for now
@@ -1809,7 +1907,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
     pendingExport,
     product,
     projectId,
-    sizeCm
+    sizeCm,
   ]);
 
   const handleSaveExport = useCallback(() => {
@@ -1845,7 +1943,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       embedFonts: true,
       withSafeZone: true,
       layers,
-      focusLayerId: activeLayerIdByView[viewKey]
+      focusLayerId: activeLayerIdByView[viewKey],
     });
     const title = viewKey === 'main' ? '' : getViewLabel(viewKey);
     const dataUrl = await svgToPngDataUrl(svg, 1200, 1200, { title });
@@ -1860,7 +1958,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       setClientModalOpen(true);
       return;
     }
-    const views = product === 'box' ? BOX_SIDES.map((side) => side.id) : FOIL_SIDES.map((side) => side.id);
+    const views =
+      product === 'box' ? BOX_SIDES.map((side) => side.id) : FOIL_SIDES.map((side) => side.id);
     await views.reduce((chain, viewKey) => {
       return chain.then(() => downloadPreviewPngForView(viewKey));
     }, Promise.resolve());
@@ -1906,7 +2005,7 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
         { x: x0, y: y0 },
         { x: x0 + w, y: y0 },
         { x: x0 + w, y: y0 + h },
-        { x: x0, y: y0 + h }
+        { x: x0, y: y0 + h },
       ];
 
       if (shape.kind === 'circle') {
@@ -1958,11 +2057,23 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             <form onSubmit={handleClientSubmit} className="form" style={{ marginTop: 12 }}>
               <label className="field">
                 <span className="field__label">Имя</span>
-                <input className="field__control" name="client_name" value={clientName} onChange={(e) => setClientName(e.target.value)} required />
+                <input
+                  className="field__control"
+                  name="client_name"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  required
+                />
               </label>
               <label className="field">
                 <span className="field__label">Контакт/телефон</span>
-                <input className="field__control" name="client_contact" value={clientContact} onChange={(e) => setClientContact(e.target.value)} required />
+                <input
+                  className="field__control"
+                  name="client_contact"
+                  value={clientContact}
+                  onChange={(e) => setClientContact(e.target.value)}
+                  required
+                />
               </label>
               <div className="hero__actions" style={{ marginTop: 12, justifyContent: 'flex-end' }}>
                 {clientReady ? (
@@ -1985,8 +2096,9 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
       <div className="section__head">
         <h1 className="section__title">Надпись онлайн</h1>
         <p className="section__subtitle">
-          Сделайте макет надписи для шара, фольгированной звезды, сердца, круга или bubble. Добавляйте несколько слоёв текста,
-          настраивайте шрифт и цвет, скачайте превью и файл для плоттера.
+          Сделайте макет надписи для шара, фольгированной звезды, сердца, круга или bubble.
+          Добавляйте несколько слоёв текста, настраивайте шрифт и цвет, скачайте превью и файл для
+          плоттера.
         </p>
       </div>
 
@@ -2034,16 +2146,22 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                   fontFamily={getLayerFontCss(layer)}
                   fontSize={layer.fontSizePx}
                   letterSpacing={layer.letterSpacing}
-                  style={{ cursor: layer.id === activeLayerId ? 'grab' : 'pointer', userSelect: 'none', touchAction: 'none' }}
+                  style={{
+                    cursor: layer.id === activeLayerId ? 'grab' : 'pointer',
+                    userSelect: 'none',
+                    touchAction: 'none',
+                  }}
                   onPointerDown={(evt) => onPointerDown(evt, layer.id)}
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}
                 >
-                  {sanitizeText(layer.text).split('\n').map((line, i) => (
-                    <tspan key={i} x={layer.pos.x} dy={i === 0 ? 0 : lineHeight}>
-                      {line}
-                    </tspan>
-                  ))}
+                  {sanitizeText(layer.text)
+                    .split('\n')
+                    .map((line, i) => (
+                      <tspan key={i} x={layer.pos.x} dy={i === 0 ? 0 : lineHeight}>
+                        {line}
+                      </tspan>
+                    ))}
                 </text>
               );
             })}
@@ -2127,7 +2245,11 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                 {hasPayloadLimit ? (
                   <>
                     {totalWeightG.toFixed(2)} г / лимит {payloadLimit.toFixed(2)} г{' '}
-                    {payloadOk ? <span className="ok">OK</span> : <span className="bad">Слишком много</span>}
+                    {payloadOk ? (
+                      <span className="ok">OK</span>
+                    ) : (
+                      <span className="bad">Слишком много</span>
+                    )}
                   </>
                 ) : (
                   <>
@@ -2140,31 +2262,54 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             <div className="kpi">
               <div className="kpi__label">Безопасная зона (слой)</div>
               <div className="kpi__value">
-                {insideNow ? <span className="ok">Текст в зоне</span> : <span className="bad">Выходит за границы</span>}
+                {insideNow ? (
+                  <span className="ok">Текст в зоне</span>
+                ) : (
+                  <span className="bad">Выходит за границы</span>
+                )}
               </div>
             </div>
 
             {product === 'box' ? (
               <div className="kpi">
                 <div className="kpi__label">Сторона</div>
-                <div className="kpi__value">{BOX_SIDES.find((side) => side.id === boxSide)?.label}</div>
+                <div className="kpi__value">
+                  {BOX_SIDES.find((side) => side.id === boxSide)?.label}
+                </div>
               </div>
             ) : isFoilProduct ? (
               <div className="kpi">
                 <div className="kpi__label">Сторона</div>
-                <div className="kpi__value">{FOIL_SIDES.find((side) => side.id === foilSide)?.label}</div>
+                <div className="kpi__value">
+                  {FOIL_SIDES.find((side) => side.id === foilSide)?.label}
+                </div>
               </div>
             ) : null}
 
             <div className="hero__actions" style={{ marginTop: 10, flexWrap: 'wrap' }}>
-              <Button onClick={handleSaveExport} type="button" variant="primary" disabled={!exportAllowed}>
+              <Button
+                onClick={handleSaveExport}
+                type="button"
+                variant="primary"
+                disabled={!exportAllowed}
+              >
                 Сохранить надпись
               </Button>
-              <Button onClick={downloadPreviewPng} type="button" variant="secondary" disabled={!exportAllowed}>
+              <Button
+                onClick={downloadPreviewPng}
+                type="button"
+                variant="secondary"
+                disabled={!exportAllowed}
+              >
                 Скачать превью (PNG)
               </Button>
               {product === 'box' || isFoilProduct ? (
-                <Button onClick={downloadAllSides} type="button" variant="ghost" disabled={!exportAllowed}>
+                <Button
+                  onClick={downloadAllSides}
+                  type="button"
+                  variant="ghost"
+                  disabled={!exportAllowed}
+                >
                   Скачать все стороны
                 </Button>
               ) : null}
@@ -2192,7 +2337,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             ) : null}
 
             <p className="muted" style={{ marginTop: 10 }}>
-              После сохранения надписи мы сформируем файл для плоттера и свяжемся с вами по указанным контактам.
+              После сохранения надписи мы сформируем файл для плоттера и свяжемся с вами по
+              указанным контактам.
             </p>
           </div>
         </div>
@@ -2209,7 +2355,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                   const p = e.target.value as ProductType;
                   setProduct(p);
                   setSizeCm(PRODUCT_SIZES_CM[p][0]);
-                  const nextViewKey = p === 'box' ? boxSide : FOIL_PRODUCTS.has(p) ? foilSide : 'main';
+                  const nextViewKey =
+                    p === 'box' ? boxSide : FOIL_PRODUCTS.has(p) ? foilSide : 'main';
                   selectView(nextViewKey);
                 }}
               >
@@ -2223,7 +2370,12 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
             <label className="field">
               <span className="field__label">Размер изделия (см)</span>
-              <select className="field__control" name="size_cm" value={sizeCm} onChange={(e) => setSizeCm(Number(e.target.value))}>
+              <select
+                className="field__control"
+                name="size_cm"
+                value={sizeCm}
+                onChange={(e) => setSizeCm(Number(e.target.value))}
+              >
                 {PRODUCT_SIZES_CM[product].map((v) => (
                   <option key={v} value={v}>
                     {v}
@@ -2287,7 +2439,9 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                     onClick={() => selectLayer(layer.id)}
                   >
                     <span className="layerItem__name">{layer.name || `Слой ${idx + 1}`}</span>
-                    <span className="layerItem__preview">{sanitizeText(layer.text).split('\n')[0]}</span>
+                    <span className="layerItem__preview">
+                      {sanitizeText(layer.text).split('\n')[0]}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -2295,14 +2449,21 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
                 <Button onClick={addLayer} type="button" variant="secondary">
                   Добавить слой
                 </Button>
-                <Button onClick={removeLayer} type="button" variant="ghost" disabled={activeLayersSnapshot.length <= 1}>
+                <Button
+                  onClick={removeLayer}
+                  type="button"
+                  variant="ghost"
+                  disabled={activeLayersSnapshot.length <= 1}
+                >
                   Удалить слой
                 </Button>
               </div>
             </div>
 
             <label className="field">
-              <span className="field__label">Текст (до {MAX_LINES} строк / {MAX_CHARS} символов)</span>
+              <span className="field__label">
+                Текст (до {MAX_LINES} строк / {MAX_CHARS} символов)
+              </span>
               <textarea
                 className="field__control"
                 name="text"
@@ -2316,7 +2477,12 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
             <div className="grid inscription__grid">
               <label className="field">
                 <span className="field__label">Шрифт (предпросмотр)</span>
-                <select className="field__control" name="font" value={fontPresetId} onChange={(e) => setFontPresetId(e.target.value)}>
+                <select
+                  className="field__control"
+                  name="font"
+                  value={fontPresetId}
+                  onChange={(e) => setFontPresetId(e.target.value)}
+                >
                   {fontOptions.map((font) => (
                     <option key={font.id} value={font.id}>
                       {font.label}
@@ -2346,8 +2512,8 @@ export function InscriptionClient({ fonts, colors }: { fonts: FontPreset[]; colo
 
             {cyrillicStatus.unsupported.length ? (
               <div className="notice notice--warn" role="status" style={{ marginTop: 8 }}>
-                Шрифт не поддерживает кириллицу: <b>{cyrillicUnsupportedPreview}</b>. Выберите другой шрифт или загрузите TTF/OTF
-                с нужными символами.
+                Шрифт не поддерживает кириллицу: <b>{cyrillicUnsupportedPreview}</b>. Выберите
+                другой шрифт или загрузите TTF/OTF с нужными символами.
               </div>
             ) : null}
 
@@ -2486,7 +2652,12 @@ function pathToD(path: OpenTypePath | null | undefined): string {
     .join(' ');
 }
 
-function measureLineWidth(font: OpenTypeFont, line: string, scale: number, letterSpacingPx: number): number {
+function measureLineWidth(
+  font: OpenTypeFont,
+  line: string,
+  scale: number,
+  letterSpacingPx: number,
+): number {
   const glyphs = font.stringToGlyphs ? font.stringToGlyphs(line) : [];
   let w = 0;
   for (const g of glyphs) {
@@ -2509,8 +2680,8 @@ function pathsToDxf(groups: DxfPathGroup[], mmPerPx: number): string {
       flattenPathToPolylines(group.d, 18).map((poly) => ({
         layer: group.layer,
         closed: poly.closed,
-        points: poly.points.map((p) => ({ x: p.x * mmPerPx, y: p.y * mmPerPx }))
-      }))
+        points: poly.points.map((p) => ({ x: p.x * mmPerPx, y: p.y * mmPerPx })),
+      })),
     );
 
   const lines: string[] = [];
@@ -2546,7 +2717,7 @@ function flattenPathToPolylines(d: string, curveSegments: number): Polyline[] {
     .replace(/,/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .match(/[a-zA-Z]|-?\d*\.?\d+(?:e[-+]?\d+)?/g);
+    .match(/[A-Za-z]|-?\d*\.?\d+(?:e[+-]?\d+)?/g);
 
   if (!tokens) return [];
 
@@ -2554,8 +2725,6 @@ function flattenPathToPolylines(d: string, curveSegments: number): Polyline[] {
   let cmd = '';
   let cx = 0;
   let cy = 0;
-  let sx = 0;
-  let sy = 0;
   const result: Polyline[] = [];
   let current: V[] = [];
   let currentClosed = false;
@@ -2570,7 +2739,7 @@ function flattenPathToPolylines(d: string, curveSegments: number): Polyline[] {
 
   while (i < tokens.length) {
     const t = tokens[i++];
-    if (/[a-zA-Z]/.test(t)) {
+    if (/[A-Za-z]/.test(t)) {
       cmd = t;
       if (cmd === 'Z' || cmd === 'z') {
         if (current.length) {
@@ -2587,8 +2756,6 @@ function flattenPathToPolylines(d: string, curveSegments: number): Polyline[] {
       const y = nextNumber();
       cx = cmd === 'm' ? cx + x : x;
       cy = cmd === 'm' ? cy + y : y;
-      sx = cx;
-      sy = cy;
       flush(currentClosed);
       current.push({ x: cx, y: cy });
       cmd = cmd === 'm' ? 'l' : 'L'; // implicit lineto for subsequent pairs
@@ -2665,7 +2832,7 @@ function cubicAt(p0: V, p1: V, p2: V, p3: V, t: number): V {
   const d = t2 * t;
   return {
     x: a * p0.x + b * p1.x + c * p2.x + d * p3.x,
-    y: a * p0.y + b * p1.y + c * p2.y + d * p3.y
+    y: a * p0.y + b * p1.y + c * p2.y + d * p3.y,
   };
 }
 

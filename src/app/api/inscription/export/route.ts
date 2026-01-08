@@ -9,7 +9,7 @@ import { isSafePathSegment, normalizeHexColor, optionalText, requireText } from 
 export const runtime = 'nodejs';
 
 function safeSegment(input: string) {
-  const cleaned = input.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+  const cleaned = input.replace(/[^\w-]/g, '').slice(0, 64);
   return cleaned || `sess-${crypto.randomBytes(4).toString('hex')}`;
 }
 
@@ -102,7 +102,9 @@ export async function POST(request: NextRequest) {
 
     const sessionId = safeSegment(sessionIdRaw);
     const exportId = crypto.randomBytes(10).toString('hex');
-    const usePrimaryView = Boolean(primaryView && viewExports.some((entry) => entry.view === primaryView));
+    const usePrimaryView = Boolean(
+      primaryView && viewExports.some((entry) => entry.view === primaryView),
+    );
 
     const dir = path.join(process.cwd(), 'storage', 'exports', sessionId);
     await ensureDir(dir);
@@ -127,7 +129,21 @@ export async function POST(request: NextRequest) {
 
     await execute(
       'INSERT INTO inscription_exports (session_id, export_id, project_hash, product, size_cm, font_id, font_name, color, client_name, client_contact, details_json, svg_path, dxf_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [sessionId, exportId, projectId, product, sizeCm, fontId, fontName, color, clientName, clientContact, detailsJson, relSvg, relDxf]
+      [
+        sessionId,
+        exportId,
+        projectId,
+        product,
+        sizeCm,
+        fontId,
+        fontName,
+        color,
+        clientName,
+        clientContact,
+        detailsJson,
+        relSvg,
+        relDxf,
+      ],
     );
 
     return NextResponse.json({ ok: true, exportId });

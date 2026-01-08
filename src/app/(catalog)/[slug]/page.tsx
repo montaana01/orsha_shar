@@ -28,8 +28,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: category.title,
       description: category.description,
       url,
-      images: [{ url: category.heroImage }]
-    }
+      images: [{ url: category.heroImage }],
+    },
   };
 }
 
@@ -85,7 +85,9 @@ export default async function CategoryPage({ params }: Props) {
         <section className="section">
           <div className="section__head">
             <h2 className="section__title">Фото</h2>
-            <p className="section__subtitle">Примеры работ. Можно использовать как референсы при заказе.</p>
+            <p className="section__subtitle">
+              Примеры работ. Можно использовать как референсы при заказе.
+            </p>
           </div>
           <Gallery images={imageUrls} altPrefix={category.title} />
         </section>
@@ -96,7 +98,8 @@ export default async function CategoryPage({ params }: Props) {
           <div>
             <h3 className="panel__title">Сформировать заявку</h3>
             <p className="muted">
-              Конфигуратор поможет быстро собрать детали и сформирует текст, который вы отправите в мессенджер.
+              Конфигуратор поможет быстро собрать детали и сформирует текст, который вы отправите в
+              мессенджер.
             </p>
           </div>
           <Button href={`/configurator?type=${category.slug}`} variant="primary">

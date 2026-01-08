@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     name,
     value,
     visible,
-    position
+    position,
   ]);
 
   const url = buildRedirectUrl(request, '/yakauleu');

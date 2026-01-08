@@ -15,7 +15,8 @@ export default async function ConfiguratorPage({ searchParams }: PageProps) {
       <div className="section__head">
         <h1 className="section__title">Конфигуратор заявки</h1>
         <p className="section__subtitle">
-          Заполните поля — мы сформируем текст, который можно сразу отправить в Instagram или Telegram.
+          Заполните поля — мы сформируем текст, который можно сразу отправить в Instagram или
+          Telegram.
         </p>
       </div>
 

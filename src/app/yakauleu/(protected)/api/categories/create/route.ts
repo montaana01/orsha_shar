@@ -4,7 +4,13 @@ import { execute } from '@/lib/db';
 import { ensureDir, isAllowedExtension, withRandomPrefix, writeFileSafe } from '@/lib/files';
 import { requireAdminRequest, unauthorized } from '@/lib/admin-guard';
 import { buildRedirectUrl } from '@/lib/request-url';
-import { isSafeFileSize, normalizeSlug, optionalText, parseNonNegativeInt, requireText } from '@/lib/validation';
+import {
+  isSafeFileSize,
+  normalizeSlug,
+  optionalText,
+  parseNonNegativeInt,
+  requireText,
+} from '@/lib/validation';
 
 export const runtime = 'nodejs';
 
@@ -39,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   await execute(
     'INSERT INTO categories (slug, title, description, hero_image, visible, position) VALUES (?, ?, ?, ?, ?, ?)',
-    [slug, title, description, heroImage, visible, position]
+    [slug, title, description, heroImage, visible, position],
   );
 
   return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu'), 303);

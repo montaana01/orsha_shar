@@ -2,7 +2,12 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { execute } from '@/lib/db';
 import { requireAdminRequest, unauthorized } from '@/lib/admin-guard';
 import { buildRedirectUrl } from '@/lib/request-url';
-import { normalizeHexColor, parseNonNegativeInt, parsePositiveInt, requireText } from '@/lib/validation';
+import {
+  normalizeHexColor,
+  parseNonNegativeInt,
+  parsePositiveInt,
+  requireText,
+} from '@/lib/validation';
 
 export const runtime = 'nodejs';
 
@@ -26,13 +31,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(url, 303);
   }
 
-  await execute('UPDATE colors SET name = ?, value = ?, visible = ?, position = ? WHERE id = ? AND is_deleted = 0', [
-    name,
-    value,
-    visible,
-    position,
-    id
-  ]);
+  await execute(
+    'UPDATE colors SET name = ?, value = ?, visible = ?, position = ? WHERE id = ? AND is_deleted = 0',
+    [name, value, visible, position, id],
+  );
 
   const url = buildRedirectUrl(request, '/yakauleu');
   if (tab) url.searchParams.set('tab', tab);

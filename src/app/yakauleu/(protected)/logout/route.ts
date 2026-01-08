@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { ADMIN_SESSION_COOKIE, buildAdminSessionCookieClear, destroyAdminSession } from '@/lib/admin-auth';
+import {
+  ADMIN_SESSION_COOKIE,
+  buildAdminSessionCookieClear,
+  destroyAdminSession,
+} from '@/lib/admin-auth';
 import { buildRedirectUrl } from '@/lib/request-url';
 
 export const runtime = 'nodejs';

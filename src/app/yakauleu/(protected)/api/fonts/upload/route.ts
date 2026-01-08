@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     name,
     fileName,
     visible,
-    position
+    position,
   ]);
 
   const url = buildRedirectUrl(request, '/yakauleu');

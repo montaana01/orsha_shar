@@ -25,9 +25,9 @@ export default async function HomePage() {
     address: {
       '@type': 'PostalAddress',
       addressLocality: site.city,
-      addressCountry: site.country
+      addressCountry: site.country,
     },
-    sameAs: [site.socials.instagram, site.socials.vk, site.socials.ok].filter(Boolean)
+    sameAs: [site.socials.instagram, site.socials.vk, site.socials.ok].filter(Boolean),
   };
 
   return (
@@ -36,9 +36,7 @@ export default async function HomePage() {
         <div className="hero__panel">
           <div className="hero__inner">
             <h1 className="hero__title">Гелиевые шары и фотозоны в Орше</h1>
-            <p className="hero__subtitle">
-              Заказ можно оформить в Instagram/Telegram.
-            </p>
+            <p className="hero__subtitle">Заказ можно оформить в Instagram/Telegram.</p>
             <div className="hero__actions">
               <a className="btn btn--primary" href={telHref(phone)}>
                 Позвонить
@@ -78,16 +76,21 @@ export default async function HomePage() {
           <>
             <div className="section__head">
               <h2 className="section__title">Оформление праздников</h2>
-              <p className="section__subtitle">Под ключ или отдельные композиции — подберем вариант под ваш повод.</p>
+              <p className="section__subtitle">
+                Под ключ или отдельные композиции — подберем вариант под ваш повод.
+              </p>
             </div>
 
             <div className="fallbackGrid">
               <div className="panel">
                 <p>
-                  Хотите праздник, который выглядит красиво вживую и идеально на фото? Мы делаем оформление «под ключ» и отдельные
-                  композиции — от небольшого сюрприза до полноценной фотозоны.
+                  Хотите праздник, который выглядит красиво вживую и идеально на фото? Мы делаем
+                  оформление «под ключ» и отдельные композиции — от небольшого сюрприза до
+                  полноценной фотозоны.
                 </p>
-                <p className="muted">Посмотрите наши работы в галерее и выберите стиль, который нравится именно вам.</p>
+                <p className="muted">
+                  Посмотрите наши работы в галерее и выберите стиль, который нравится именно вам.
+                </p>
               </div>
 
               <div className="panel">
@@ -97,7 +100,9 @@ export default async function HomePage() {
                   <li>Фонтаны из шаров — латекс/фольга, сердца, звёзды, цифры и другое</li>
                   <li>Коробка-сюрприз — шары + можно положить подарок, любой текст на коробке</li>
                   <li>Букеты из шаров — аккуратный и необычный подарок</li>
-                  <li>Фигуры из шаров — любая сложность, можем повторить по референсу из интернета</li>
+                  <li>
+                    Фигуры из шаров — любая сложность, можем повторить по референсу из интернета
+                  </li>
                   <li>Цифры — стильный акцент для дня рождения/юбилея</li>
                   <li>Тематические украшения — свадьбы, выпускные, линейки, выписка из роддома</li>
                   <li>Шары Bubbles — шар-гигант с надписью и наполнением</li>
@@ -133,7 +138,9 @@ export default async function HomePage() {
           <>
             <div className="section__head">
               <h2 className="section__title">Категории</h2>
-              <p className="section__subtitle">Выберите категорию — на странице будут фото и краткое описание.</p>
+              <p className="section__subtitle">
+                Выберите категорию — на странице будут фото и краткое описание.
+              </p>
             </div>
             <CategoryGrid categories={categories} />
           </>
@@ -144,13 +151,16 @@ export default async function HomePage() {
         <div className="section__head">
           <h2 className="section__title">Как сделать заказ</h2>
           <p className="section__subtitle">
-            Напишите в Instagram/Telegram: дата, город/район, что нужно, желаемые цвета и бюджет. Мы предложим варианты.
+            Напишите в Instagram/Telegram: дата, город/район, что нужно, желаемые цвета и бюджет. Мы
+            предложим варианты.
           </p>
         </div>
         <div className="grid">
           <div className="panel">
             <h3 className="panel__title">1. Выберите идею</h3>
-            <p className="muted">Посмотрите примеры в каталоге и сохраните понравившиеся фотографии.</p>
+            <p className="muted">
+              Посмотрите примеры в каталоге и сохраните понравившиеся фотографии.
+            </p>
           </div>
           <div className="panel">
             <h3 className="panel__title">2. Согласуем детали</h3>
@@ -158,7 +168,9 @@ export default async function HomePage() {
           </div>
           <div className="panel">
             <h3 className="panel__title">3. Доставим</h3>
-            <p className="muted">В пределах Орши и Бабинич в зависимости от суммы заказа. По району — платно.</p>
+            <p className="muted">
+              В пределах Орши и Бабинич в зависимости от суммы заказа. По району — платно.
+            </p>
           </div>
         </div>
       </section>
@@ -182,7 +194,10 @@ export default async function HomePage() {
           </div>
           <div className="panel panel--service">
             <h3 className="panel__title">Конструктор надписи</h3>
-            <p className="muted">Соберите надпись для шара, звезды, сердца, круга (фольга) или bubble и скачайте превью.</p>
+            <p className="muted">
+              Соберите надпись для шара, звезды, сердца, круга (фольга) или bubble и скачайте
+              превью.
+            </p>
             <div className="hero__actions" style={{ marginTop: 12 }}>
               <Button href="/inscription" variant="secondary">
                 Открыть конструктор
@@ -192,7 +207,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     </>
   );
 }

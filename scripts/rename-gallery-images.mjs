@@ -46,10 +46,12 @@ const pool = mysql.createPool({
   user,
   password: process.env.MYSQL_PASSWORD,
   database,
-  port: Number(process.env.MYSQL_PORT || '3306')
+  port: Number(process.env.MYSQL_PORT || '3306'),
 });
 
-const [categories] = await pool.query('SELECT id, slug, hero_image FROM categories ORDER BY id ASC');
+const [categories] = await pool.query(
+  'SELECT id, slug, hero_image FROM categories ORDER BY id ASC',
+);
 const galleryRoot = path.resolve(process.cwd(), 'public', 'gallery');
 
 for (const category of categories) {
@@ -66,7 +68,7 @@ for (const category of categories) {
 
   const [images] = await pool.query(
     'SELECT id, file_name, position FROM category_images WHERE category_id = ? ORDER BY position ASC, id ASC',
-    [category.id]
+    [category.id],
   );
   if (!images.length) continue;
 
@@ -76,7 +78,7 @@ for (const category of categories) {
       id: row.id,
       oldName: row.file_name,
       newName: formatName(idx + 1, ext),
-      newPosition: idx + 1
+      newPosition: idx + 1,
     };
   });
 
@@ -92,10 +94,12 @@ for (const category of categories) {
   }
   if (missing) continue;
 
-  const renames = items.filter((item) => item.oldName !== item.newName).map((item) => ({
-    ...item,
-    tempName: `${item.oldName}.tmp-${crypto.randomBytes(4).toString('hex')}`
-  }));
+  const renames = items
+    .filter((item) => item.oldName !== item.newName)
+    .map((item) => ({
+      ...item,
+      tempName: `${item.oldName}.tmp-${crypto.randomBytes(4).toString('hex')}`,
+    }));
 
   if (dryRun) {
     console.log(`[DRY_RUN] ${slug}`);
@@ -115,7 +119,10 @@ for (const category of categories) {
   const heroPath = String(category.hero_image || '');
   for (const item of items) {
     if (heroPath === `/gallery/${slug}/${item.oldName}` && item.oldName !== item.newName) {
-      await pool.execute('UPDATE categories SET hero_image = ? WHERE id = ?', [`/gallery/${slug}/${item.newName}`, category.id]);
+      await pool.execute('UPDATE categories SET hero_image = ? WHERE id = ?', [
+        `/gallery/${slug}/${item.newName}`,
+        category.id,
+      ]);
       break;
     }
   }
@@ -124,7 +131,7 @@ for (const category of categories) {
     await pool.execute('UPDATE category_images SET file_name = ?, position = ? WHERE id = ?', [
       item.newName,
       item.newPosition,
-      item.id
+      item.id,
     ]);
   }
 

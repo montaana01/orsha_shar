@@ -28,7 +28,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(url, 303);
   }
 
-  const rows = await query<{ id: number }>('SELECT id FROM colors WHERE id = ? AND is_deleted = 1 LIMIT 1', [id]);
+  const rows = await query<{ id: number }>(
+    'SELECT id FROM colors WHERE id = ? AND is_deleted = 1 LIMIT 1',
+    [id],
+  );
   if (!rows[0]) {
     const url = buildRedirectUrl(request, '/yakauleu');
     if (tab) url.searchParams.set('tab', tab);

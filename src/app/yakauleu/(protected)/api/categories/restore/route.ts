@@ -30,7 +30,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(url, 303);
   }
 
-  const rows = await query<{ slug: string }>('SELECT slug FROM categories WHERE id = ? AND is_deleted = 1 LIMIT 1', [id]);
+  const rows = await query<{ slug: string }>(
+    'SELECT slug FROM categories WHERE id = ? AND is_deleted = 1 LIMIT 1',
+    [id],
+  );
   const category = rows[0];
   if (!category) {
     const url = buildRedirectUrl(request, '/yakauleu');
@@ -51,7 +54,9 @@ export async function POST(request: NextRequest) {
   }
 
   await execute('UPDATE categories SET is_deleted = 0, visible = 1 WHERE id = ?', [id]);
-  await execute('UPDATE category_images SET is_deleted = 0, visible = 1 WHERE category_id = ?', [id]);
+  await execute('UPDATE category_images SET is_deleted = 0, visible = 1 WHERE category_id = ?', [
+    id,
+  ]);
 
   const url = buildRedirectUrl(request, '/yakauleu');
   if (tab) url.searchParams.set('tab', tab);

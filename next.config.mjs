@@ -12,7 +12,7 @@ const nextConfig = {
     deviceSizes: [360, 640, 828, 1080, 1200, 1920],
     imageSizes: [32, 48, 64, 96, 128, 256, 384],
     // Держим кэш оптимизированных картинок дольше (уменьшает повторные перерасчёты)
-    minimumCacheTTL: 2678400 // 31 day
+    minimumCacheTTL: 2678400, // 31 day
   },
   async redirects() {
     return [
@@ -24,9 +24,9 @@ const nextConfig = {
       { source: '/page16852621.html', destination: '/figures', permanent: true },
       { source: '/page17355325.html', destination: '/numerals', permanent: true },
       { source: '/page16834900.html', destination: '/tematicheskiye', permanent: true },
-      { source: '/page17124782.html', destination: '/bubbles', permanent: true }
+      { source: '/page17124782.html', destination: '/bubbles', permanent: true },
     ];
-  }
+  },
 };
 
 export default nextConfig;

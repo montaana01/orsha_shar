@@ -1,6 +1,6 @@
-const SLUG_RE = /^[a-z0-9][a-z0-9_-]*$/;
-const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-const SAFE_SEGMENT_RE = /^[a-zA-Z0-9_-]+$/;
+const SLUG_RE = /^[\da-z][\d_a-z-]*$/;
+const HEX_RE = /^#([\dA-Fa-f]{3}|[\dA-Fa-f]{6})$/;
+const SAFE_SEGMENT_RE = /^[\w-]+$/;
 
 export function normalizeSlug(input: string): string | null {
   const value = input.trim().toLowerCase();

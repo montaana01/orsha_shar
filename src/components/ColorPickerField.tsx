@@ -8,7 +8,7 @@ type Props = {
   disabled?: boolean;
 };
 
-const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+const HEX_RE = /^#([\dA-Fa-f]{3}|[\dA-Fa-f]{6})$/;
 
 function normalizeHex(value: string): string {
   const raw = value.trim();

@@ -12,7 +12,7 @@ import {
   getDeletedExports,
   getDeletedFonts,
   getExports,
-  getFonts
+  getFonts,
 } from '@/lib/data';
 import { getDiskUsage } from '@/lib/files';
 import { isSafePathSegment } from '@/lib/validation';
@@ -27,7 +27,7 @@ const TABS = [
   { id: 'fonts', label: 'Шрифты' },
   { id: 'colors', label: 'Цвета' },
   { id: 'exports', label: 'Экспорты' },
-  { id: 'archive', label: 'Архив' }
+  { id: 'archive', label: 'Архив' },
 ] as const;
 
 const ARCHIVE_SECTIONS = new Set(['categories', 'images', 'fonts', 'colors', 'exports']);
@@ -91,21 +91,22 @@ export default async function AdminPage({ searchParams }: Props) {
     getCategories({ includeHidden: true }).catch(() => []),
     getFonts({ includeHidden: true }).catch(() => []),
     getColors({ includeHidden: true }).catch(() => []),
-    getExports().catch(() => [])
+    getExports().catch(() => []),
   ]);
-  const [deletedCategories, deletedImages, deletedFonts, deletedColors, deletedExports] = await Promise.all([
-    getDeletedCategories().catch(() => []),
-    getDeletedCategoryImages().catch(() => []),
-    getDeletedFonts().catch(() => []),
-    getDeletedColors().catch(() => []),
-    getDeletedExports().catch(() => [])
-  ]);
+  const [deletedCategories, deletedImages, deletedFonts, deletedColors, deletedExports] =
+    await Promise.all([
+      getDeletedCategories().catch(() => []),
+      getDeletedCategoryImages().catch(() => []),
+      getDeletedFonts().catch(() => []),
+      getDeletedColors().catch(() => []),
+      getDeletedExports().catch(() => []),
+    ]);
 
   const categoriesWithImages = await Promise.all(
     categories.map(async (category) => ({
       category,
-      images: await getCategoryImages(category.id, { includeHidden: true }).catch(() => [])
-    }))
+      images: await getCategoryImages(category.id, { includeHidden: true }).catch(() => []),
+    })),
   );
 
   return (
@@ -173,7 +174,14 @@ export default async function AdminPage({ searchParams }: Props) {
                 </label>
                 <label className="field">
                   <span className="field__label">Позиция</span>
-                  <input className="field__control" name="position" type="number" min={0} max={9999} defaultValue={0} />
+                  <input
+                    className="field__control"
+                    name="position"
+                    type="number"
+                    min={0}
+                    max={9999}
+                    defaultValue={0}
+                  />
                 </label>
               </div>
               <label className="toggle" style={{ marginBottom: 12 }}>
@@ -204,7 +212,13 @@ export default async function AdminPage({ searchParams }: Props) {
                     <div className="grid inscription__grid">
                       <label className="field">
                         <span className="field__label">Название</span>
-                        <input className="field__control" name="title" maxLength={190} defaultValue={category.title} required />
+                        <input
+                          className="field__control"
+                          name="title"
+                          maxLength={190}
+                          defaultValue={category.title}
+                          required
+                        />
                       </label>
                       <label className="field">
                         <span className="field__label">Slug</span>
@@ -233,17 +247,35 @@ export default async function AdminPage({ searchParams }: Props) {
                     <div className="grid inscription__grid">
                       <label className="field">
                         <span className="field__label">Обновить главное изображение (файл)</span>
-                        <input className="field__control" name="hero_file" type="file" accept=".jpg,.jpeg,.png,.webp,.gif" />
+                        <input
+                          className="field__control"
+                          name="hero_file"
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,.gif"
+                        />
                       </label>
                       <label className="field">
                         <span className="field__label">Позиция</span>
-                        <input className="field__control" name="position" type="number" min={0} max={9999} defaultValue={category.position} />
+                        <input
+                          className="field__control"
+                          name="position"
+                          type="number"
+                          min={0}
+                          max={9999}
+                          defaultValue={category.position}
+                        />
                       </label>
                     </div>
                     {category.heroImage ? (
                       <div className="adminHeroPreview">
                         <div className="adminHeroImage watermarked">
-                          <Image src={category.heroImage} alt="" width={160} height={120} sizes="160px" />
+                          <Image
+                            src={category.heroImage}
+                            alt=""
+                            width={160}
+                            height={120}
+                            sizes="160px"
+                          />
                         </div>
                         <div className="muted" style={{ fontSize: 12 }}>
                           {category.heroImage}
@@ -258,7 +290,11 @@ export default async function AdminPage({ searchParams }: Props) {
                       <button className="btn btn--secondary" type="submit">
                         Сохранить категорию
                       </button>
-                      <button className="btn btn--ghost" type="submit" formAction="/yakauleu/api/categories/delete">
+                      <button
+                        className="btn btn--ghost"
+                        type="submit"
+                        formAction="/yakauleu/api/categories/delete"
+                      >
                         Удалить категорию
                       </button>
                     </div>
@@ -275,7 +311,13 @@ export default async function AdminPage({ searchParams }: Props) {
                     <input type="hidden" name="tab" value="categories" />
                     <label className="field">
                       <span className="field__label">Добавить изображения</span>
-                      <input className="field__control" type="file" name="files" accept=".jpg,.jpeg,.png,.webp,.gif" multiple />
+                      <input
+                        className="field__control"
+                        type="file"
+                        name="files"
+                        accept=".jpg,.jpeg,.png,.webp,.gif"
+                        multiple
+                      />
                     </label>
                     <button className="btn btn--ghost" type="submit">
                       Загрузить фото
@@ -296,7 +338,14 @@ export default async function AdminPage({ searchParams }: Props) {
                           <input type="hidden" name="tab" value="categories" />
                           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                             <div className="adminThumb watermarked">
-                              <Image src={image.url} alt="" width={80} height={80} sizes="80px" style={{ objectFit: 'cover' }} />
+                              <Image
+                                src={image.url}
+                                alt=""
+                                width={80}
+                                height={80}
+                                sizes="80px"
+                                style={{ objectFit: 'cover' }}
+                              />
                             </div>
                             <div>
                               <div style={{ fontSize: 13 }}>{image.fileName}</div>
@@ -308,10 +357,21 @@ export default async function AdminPage({ searchParams }: Props) {
                           <div className="grid inscription__grid">
                             <label className="field">
                               <span className="field__label">Позиция</span>
-                              <input className="field__control" type="number" name="position" min={0} max={9999} defaultValue={image.position} />
+                              <input
+                                className="field__control"
+                                type="number"
+                                name="position"
+                                min={0}
+                                max={9999}
+                                defaultValue={image.position}
+                              />
                             </label>
                             <label className="toggle" style={{ marginTop: 22 }}>
-                              <input type="checkbox" name="visible" defaultChecked={image.visible} />
+                              <input
+                                type="checkbox"
+                                name="visible"
+                                defaultChecked={image.visible}
+                              />
                               <span>Показывать</span>
                             </label>
                           </div>
@@ -319,7 +379,11 @@ export default async function AdminPage({ searchParams }: Props) {
                             <button className="btn btn--secondary" type="submit">
                               Сохранить фото
                             </button>
-                            <button className="btn btn--ghost" type="submit" formAction="/yakauleu/api/images/delete">
+                            <button
+                              className="btn btn--ghost"
+                              type="submit"
+                              formAction="/yakauleu/api/images/delete"
+                            >
                               Удалить
                             </button>
                           </div>
@@ -353,13 +417,26 @@ export default async function AdminPage({ searchParams }: Props) {
                 </label>
                 <label className="field">
                   <span className="field__label">Файл (TTF/OTF)</span>
-                  <input className="field__control" type="file" name="file" accept=".ttf,.otf" required />
+                  <input
+                    className="field__control"
+                    type="file"
+                    name="file"
+                    accept=".ttf,.otf"
+                    required
+                  />
                 </label>
               </div>
               <div className="grid inscription__grid">
                 <label className="field">
                   <span className="field__label">Позиция</span>
-                  <input className="field__control" name="position" type="number" min={0} max={9999} defaultValue={0} />
+                  <input
+                    className="field__control"
+                    name="position"
+                    type="number"
+                    min={0}
+                    max={9999}
+                    defaultValue={0}
+                  />
                 </label>
                 <label className="toggle" style={{ marginTop: 22 }}>
                   <input type="checkbox" name="visible" defaultChecked />
@@ -373,7 +450,13 @@ export default async function AdminPage({ searchParams }: Props) {
 
             <div className="list">
               {fonts.map((font) => (
-                <form key={font.id} method="post" action="/yakauleu/api/fonts/update" className="panel" style={{ display: 'grid', gap: 10 }}>
+                <form
+                  key={font.id}
+                  method="post"
+                  action="/yakauleu/api/fonts/update"
+                  className="panel"
+                  style={{ display: 'grid', gap: 10 }}
+                >
                   <input type="hidden" name="id" value={font.id} />
                   <input type="hidden" name="tab" value="fonts" />
                   <div className="muted" style={{ fontSize: 12 }}>
@@ -382,11 +465,24 @@ export default async function AdminPage({ searchParams }: Props) {
                   <div className="grid inscription__grid">
                     <label className="field">
                       <span className="field__label">Название</span>
-                      <input className="field__control" name="name" maxLength={190} defaultValue={font.name} required />
+                      <input
+                        className="field__control"
+                        name="name"
+                        maxLength={190}
+                        defaultValue={font.name}
+                        required
+                      />
                     </label>
                     <label className="field">
                       <span className="field__label">Позиция</span>
-                      <input className="field__control" type="number" name="position" min={0} max={9999} defaultValue={font.position} />
+                      <input
+                        className="field__control"
+                        type="number"
+                        name="position"
+                        min={0}
+                        max={9999}
+                        defaultValue={font.position}
+                      />
                     </label>
                   </div>
                   <label className="toggle" style={{ marginTop: 4 }}>
@@ -397,7 +493,11 @@ export default async function AdminPage({ searchParams }: Props) {
                     <button className="btn btn--secondary" type="submit">
                       Сохранить
                     </button>
-                    <button className="btn btn--ghost" type="submit" formAction="/yakauleu/api/fonts/delete">
+                    <button
+                      className="btn btn--ghost"
+                      type="submit"
+                      formAction="/yakauleu/api/fonts/delete"
+                    >
                       Удалить
                     </button>
                   </div>
@@ -410,7 +510,12 @@ export default async function AdminPage({ searchParams }: Props) {
         {activeTab.id === 'colors' ? (
           <div className="panel">
             <h2 className="panel__title">Цвета наклеек</h2>
-            <form method="post" action="/yakauleu/api/colors/create" className="form" style={{ marginBottom: 16 }}>
+            <form
+              method="post"
+              action="/yakauleu/api/colors/create"
+              className="form"
+              style={{ marginBottom: 16 }}
+            >
               <input type="hidden" name="tab" value="colors" />
               <div className="grid inscription__grid">
                 <label className="field">
@@ -425,7 +530,14 @@ export default async function AdminPage({ searchParams }: Props) {
               <div className="grid inscription__grid">
                 <label className="field">
                   <span className="field__label">Позиция</span>
-                  <input className="field__control" name="position" type="number" min={0} max={9999} defaultValue={0} />
+                  <input
+                    className="field__control"
+                    name="position"
+                    type="number"
+                    min={0}
+                    max={9999}
+                    defaultValue={0}
+                  />
                 </label>
                 <label className="toggle" style={{ marginTop: 22 }}>
                   <input type="checkbox" name="visible" defaultChecked />
@@ -439,13 +551,25 @@ export default async function AdminPage({ searchParams }: Props) {
 
             <div className="list">
               {colors.map((color) => (
-                <form key={color.id} method="post" action="/yakauleu/api/colors/update" className="panel" style={{ display: 'grid', gap: 10 }}>
+                <form
+                  key={color.id}
+                  method="post"
+                  action="/yakauleu/api/colors/update"
+                  className="panel"
+                  style={{ display: 'grid', gap: 10 }}
+                >
                   <input type="hidden" name="id" value={color.id} />
                   <input type="hidden" name="tab" value="colors" />
                   <div className="grid inscription__grid">
                     <label className="field">
                       <span className="field__label">Название</span>
-                      <input className="field__control" name="name" maxLength={190} defaultValue={color.name} required />
+                      <input
+                        className="field__control"
+                        name="name"
+                        maxLength={190}
+                        defaultValue={color.name}
+                        required
+                      />
                     </label>
                     <label className="field">
                       <span className="field__label">Цвет</span>
@@ -455,7 +579,14 @@ export default async function AdminPage({ searchParams }: Props) {
                   <div className="grid inscription__grid">
                     <label className="field">
                       <span className="field__label">Позиция</span>
-                      <input className="field__control" name="position" type="number" min={0} max={9999} defaultValue={color.position} />
+                      <input
+                        className="field__control"
+                        name="position"
+                        type="number"
+                        min={0}
+                        max={9999}
+                        defaultValue={color.position}
+                      />
                     </label>
                     <label className="toggle" style={{ marginTop: 22 }}>
                       <input type="checkbox" name="visible" defaultChecked={color.visible} />
@@ -466,7 +597,11 @@ export default async function AdminPage({ searchParams }: Props) {
                     <button className="btn btn--secondary" type="submit">
                       Сохранить
                     </button>
-                    <button className="btn btn--ghost" type="submit" formAction="/yakauleu/api/colors/delete">
+                    <button
+                      className="btn btn--ghost"
+                      type="submit"
+                      formAction="/yakauleu/api/colors/delete"
+                    >
                       Удалить
                     </button>
                   </div>
@@ -497,7 +632,8 @@ export default async function AdminPage({ searchParams }: Props) {
                     <details key={exp.id} className="panel" style={{ background: 'transparent' }}>
                       <summary className="nav__link--summary nav__link--flex">
                         <div className="nav__link nav__link--summary">
-                          {productLabel} • {exp.sizeCm} см <span className="muted">({orderLabel})</span>
+                          {productLabel} • {exp.sizeCm} см{' '}
+                          <span className="muted">({orderLabel})</span>
                         </div>
                         <form method="post" action="/yakauleu/api/exports/delete">
                           <input type="hidden" name="id" value={exp.id} />
@@ -529,11 +665,27 @@ export default async function AdminPage({ searchParams }: Props) {
                         {views.length ? (
                           <div className="list">
                             {views.map((view) => {
-                              const viewId = typeof view.id === 'string' && isSafePathSegment(view.id, 40) ? view.id : null;
+                              const viewId =
+                                typeof view.id === 'string' && isSafePathSegment(view.id, 40)
+                                  ? view.id
+                                  : null;
                               return (
-                                <div key={view.id ?? view.label} className="panel" style={{ display: 'grid', gap: 8 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                                    <div style={{ fontWeight: 600 }}>{view.label ?? view.id ?? 'Сторона'}</div>
+                                <div
+                                  key={view.id ?? view.label}
+                                  className="panel"
+                                  style={{ display: 'grid', gap: 8 }}
+                                >
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 12,
+                                      flexWrap: 'wrap',
+                                    }}
+                                  >
+                                    <div style={{ fontWeight: 600 }}>
+                                      {view.label ?? view.id ?? 'Сторона'}
+                                    </div>
                                     {viewId ? (
                                       <div className="hero__actions" style={{ marginLeft: 'auto' }}>
                                         <a
@@ -553,18 +705,28 @@ export default async function AdminPage({ searchParams }: Props) {
                                   </div>
                                   {view.layers?.length ? (
                                     view.layers.map((layer) => (
-                                      <div key={layer.id ?? layer.name} style={{ display: 'grid', gap: 4 }}>
+                                      <div
+                                        key={layer.id ?? layer.name}
+                                        style={{ display: 'grid', gap: 4 }}
+                                      >
                                         <div style={{ fontSize: 14 }}>{layer.name ?? 'Слой'}</div>
-                                        <div className="muted" style={{ fontSize: 12, whiteSpace: 'pre-wrap' }}>
+                                        <div
+                                          className="muted"
+                                          style={{ fontSize: 12, whiteSpace: 'pre-wrap' }}
+                                        >
                                           {layer.text || '—'}
                                         </div>
                                         <div className="muted" style={{ fontSize: 12 }}>
                                           {layer.fontName ? `Шрифт: ${layer.fontName}` : null}
                                           {layer.fontSizePx ? ` • ${layer.fontSizePx}px` : ''}
-                                          {layer.letterSpacing ? ` • трекинг ${layer.letterSpacing}px` : ''}
+                                          {layer.letterSpacing
+                                            ? ` • трекинг ${layer.letterSpacing}px`
+                                            : ''}
                                         </div>
                                         <div className="muted" style={{ fontSize: 12 }}>
-                                          {layer.widthCm ? `Ширина: ${layer.widthCm} см` : 'Ширина: —'}
+                                          {layer.widthCm
+                                            ? `Ширина: ${layer.widthCm} см`
+                                            : 'Ширина: —'}
                                           {layer.heightCm ? ` • Высота: ${layer.heightCm} см` : ''}
                                         </div>
                                       </div>
@@ -593,14 +755,21 @@ export default async function AdminPage({ searchParams }: Props) {
         {activeTab.id === 'archive' ? (
           <div className="panel">
             <h2 className="panel__title">Архив удалённых данных</h2>
-            <p className="muted">Удалённые элементы хранятся в базе с флагом и в папке `deleted`.</p>
+            <p className="muted">
+              Удалённые элементы хранятся в базе с флагом и в папке `deleted`.
+            </p>
             {diskUsage ? (
               <div className="muted" style={{ fontSize: 12, marginBottom: 12 }}>
-                Диск: свободно {formatBytes(diskUsage.freeBytes)} из {formatBytes(diskUsage.totalBytes)}
+                Диск: свободно {formatBytes(diskUsage.freeBytes)} из{' '}
+                {formatBytes(diskUsage.totalBytes)}
               </div>
             ) : null}
             <div className="list">
-              <details className="panel" style={{ background: 'transparent' }} open={activeArchiveSection === 'categories'}>
+              <details
+                className="panel"
+                style={{ background: 'transparent' }}
+                open={activeArchiveSection === 'categories'}
+              >
                 <summary className="nav__link nav__link--summary">
                   Категории ({deletedCategories.length})
                 </summary>
@@ -633,7 +802,11 @@ export default async function AdminPage({ searchParams }: Props) {
                 </div>
               </details>
 
-              <details className="panel" style={{ background: 'transparent' }} open={activeArchiveSection === 'images'}>
+              <details
+                className="panel"
+                style={{ background: 'transparent' }}
+                open={activeArchiveSection === 'images'}
+              >
                 <summary className="nav__link nav__link--summary">
                   Фото категорий ({deletedImages.length})
                 </summary>
@@ -666,7 +839,11 @@ export default async function AdminPage({ searchParams }: Props) {
                 </div>
               </details>
 
-              <details className="panel" style={{ background: 'transparent' }} open={activeArchiveSection === 'fonts'}>
+              <details
+                className="panel"
+                style={{ background: 'transparent' }}
+                open={activeArchiveSection === 'fonts'}
+              >
                 <summary className="nav__link nav__link--summary">
                   Шрифты ({deletedFonts.length})
                 </summary>
@@ -707,7 +884,11 @@ export default async function AdminPage({ searchParams }: Props) {
                 </div>
               </details>
 
-              <details className="panel" style={{ background: 'transparent' }} open={activeArchiveSection === 'colors'}>
+              <details
+                className="panel"
+                style={{ background: 'transparent' }}
+                open={activeArchiveSection === 'colors'}
+              >
                 <summary className="nav__link nav__link--summary">
                   Цвета ({deletedColors.length})
                 </summary>
@@ -748,7 +929,11 @@ export default async function AdminPage({ searchParams }: Props) {
                 </div>
               </details>
 
-              <details className="panel" style={{ background: 'transparent' }} open={activeArchiveSection === 'exports'}>
+              <details
+                className="panel"
+                style={{ background: 'transparent' }}
+                open={activeArchiveSection === 'exports'}
+              >
                 <summary className="nav__link nav__link--summary">
                   Экспорты ({deletedExports.length})
                 </summary>
@@ -771,7 +956,9 @@ export default async function AdminPage({ searchParams }: Props) {
                             Удалено: {new Date(exp.deletedAt).toLocaleString('ru-RU')}
                           </div>
                           <div className="muted" style={{ fontSize: 12 }}>
-                            {isExpired ? 'Срок хранения истёк' : `Можно восстановить: ${daysLeft} дн.`}
+                            {isExpired
+                              ? 'Срок хранения истёк'
+                              : `Можно восстановить: ${daysLeft} дн.`}
                           </div>
                           <div className="muted" style={{ fontSize: 12 }}>
                             Клиент: {exp.clientName || '—'} • Контакт: {exp.clientContact || '—'}

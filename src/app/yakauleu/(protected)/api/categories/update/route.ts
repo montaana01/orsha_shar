@@ -5,7 +5,15 @@ import { execute, query } from '@/lib/db';
 import { ensureDir, isAllowedExtension, withRandomPrefix, writeFileSafe } from '@/lib/files';
 import { requireAdminRequest, unauthorized } from '@/lib/admin-guard';
 import { buildRedirectUrl } from '@/lib/request-url';
-import { isSafeFileSize, isSafePathSegment, normalizeSlug, optionalText, parseNonNegativeInt, parsePositiveInt, requireText } from '@/lib/validation';
+import {
+  isSafeFileSize,
+  isSafePathSegment,
+  normalizeSlug,
+  optionalText,
+  parseNonNegativeInt,
+  parsePositiveInt,
+  requireText,
+} from '@/lib/validation';
 
 export const runtime = 'nodejs';
 
@@ -28,7 +36,7 @@ export async function POST(request: NextRequest) {
 
   const existing = await query<{ slug: string; hero_image: string }>(
     'SELECT slug, hero_image FROM categories WHERE id = ? AND is_deleted = 0 LIMIT 1',
-    [id]
+    [id],
   );
   const prevSlug = existing[0]?.slug ?? '';
   let heroImage = existing[0]?.hero_image ?? '';
@@ -62,7 +70,12 @@ export async function POST(request: NextRequest) {
     heroImage = `/gallery/${slug}/${fileName}`;
   }
 
-  if (!heroFile && heroImage && prevSlug !== slug && heroImage.startsWith(`/gallery/${prevSlug}/`)) {
+  if (
+    !heroFile &&
+    heroImage &&
+    prevSlug !== slug &&
+    heroImage.startsWith(`/gallery/${prevSlug}/`)
+  ) {
     heroImage = `/gallery/${slug}/${path.basename(heroImage)}`;
   }
 
@@ -72,7 +85,7 @@ export async function POST(request: NextRequest) {
 
   await execute(
     'UPDATE categories SET slug = ?, title = ?, description = ?, hero_image = ?, visible = ?, position = ? WHERE id = ?',
-    [slug, title, description, heroImage, visible, position, id]
+    [slug, title, description, heroImage, visible, position, id],
   );
 
   return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu'), 303);

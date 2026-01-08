@@ -1,7 +1,7 @@
 import { site } from '@/content/site';
 
 export const metadata = {
-  title: 'Вход в админку'
+  title: 'Вход в админку',
 };
 
 type Props = { searchParams?: Promise<{ error?: string }> };
@@ -39,7 +39,13 @@ export default async function AdminLoginPage({ searchParams }: Props) {
 
           <label className="field">
             <span className="field__label">Пароль</span>
-            <input className="field__control" type="password" name="password" maxLength={128} required />
+            <input
+              className="field__control"
+              type="password"
+              name="password"
+              maxLength={128}
+              required
+            />
           </label>
 
           <button className="btn btn--primary" type="submit">

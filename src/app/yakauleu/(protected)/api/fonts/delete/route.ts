@@ -26,7 +26,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(url, 303);
   }
 
-  const rows = await query<{ file_name: string }>('SELECT file_name FROM fonts WHERE id = ? AND is_deleted = 0 LIMIT 1', [id]);
+  const rows = await query<{ file_name: string }>(
+    'SELECT file_name FROM fonts WHERE id = ? AND is_deleted = 0 LIMIT 1',
+    [id],
+  );
   const font = rows[0];
   if (!font) {
     const url = buildRedirectUrl(request, '/yakauleu');

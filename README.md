@@ -87,15 +87,15 @@ npm run start
 
 a) Создайте таблицы:
 
-  ```bash
-  mysql -u <user> -p < db/schema.sql
-  ```
-  
+```bash
+mysql -u <user> -p < db/schema.sql
+```
+
 b) Создайте первого админа:
 
-  ```bash
-  ADMIN_EMAIL=shar@orsha-shar.by ADMIN_PASSWORD=your_password node scripts/create-admin.mjs
-  ```
+```bash
+ADMIN_EMAIL=shar@orsha-shar.by ADMIN_PASSWORD=your_password node scripts/create-admin.mjs
+```
 
 c) Откройте `/yakauleu` и управляйте категориями, фото, шрифтами и цветами.
 

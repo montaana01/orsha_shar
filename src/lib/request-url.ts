@@ -26,14 +26,17 @@ export function getRequestOrigin(request: Request): string {
 
   const proto =
     forwardedProto ||
-    (host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('0.0.0.0') ? 'http' : 'https');
+    (host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('0.0.0.0')
+      ? 'http'
+      : 'https');
 
   const local = host ? isLocalHost(host) : false;
   const siteUrl = new URL(site.url);
   const siteHost = siteUrl.hostname;
   if (host) {
     const parsed = parseHost(host);
-    const hasOddPort = parsed.port !== null && parsed.port !== '' && parsed.port !== '443' && parsed.port !== '80';
+    const hasOddPort =
+      parsed.port !== null && parsed.port !== '' && parsed.port !== '443' && parsed.port !== '80';
     const hostMismatch = parsed.hostname !== siteHost;
     if (local) return `${proto}://${host}`;
     if (hostMismatch || hasOddPort) return site.url;
