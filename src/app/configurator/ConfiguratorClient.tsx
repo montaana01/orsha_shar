@@ -71,19 +71,19 @@ export function ConfiguratorClient({
   }, [timeExact, timeFrom, timeMode, timeTo]);
 
   const requestText = useMemo(() => {
-    const lines: string[] = [];
-    lines.push('Заявка с сайта ORSHA SHAR');
-    lines.push(`Категория: ${typeLabel}`);
-    if (occasion) lines.push(`Событие/повод: ${occasion}`);
-    if (formattedDate || timeLabel) {
-      const parts = [formattedDate, timeLabel].filter(Boolean).join(', ');
-      lines.push(`Дата/время: ${parts}`);
-    }
-    if (location) lines.push(`Адрес/локация: ${location}`);
-    if (colors) lines.push(`Цвета/стиль: ${colors}`);
-    if (budget) lines.push(`Бюджет: ${budget}`);
-    if (contact) lines.push(`Контакт: ${contact}`);
-    if (notes) lines.push(`Комментарий: ${notes}`);
+    const parts = [formattedDate, timeLabel].filter(Boolean).join(', ');
+    const dateLine = parts ? `Дата/время: ${parts}` : '';
+    const lines = [
+      'Заявка с сайта ORSHA SHAR',
+      `Категория: ${typeLabel}`,
+      ...(occasion ? [`Событие/повод: ${occasion}`] : []),
+      ...(dateLine ? [dateLine] : []),
+      ...(location ? [`Адрес/локация: ${location}`] : []),
+      ...(colors ? [`Цвета/стиль: ${colors}`] : []),
+      ...(budget ? [`Бюджет: ${budget}`] : []),
+      ...(contact ? [`Контакт: ${contact}`] : []),
+      ...(notes ? [`Комментарий: ${notes}`] : []),
+    ];
     return lines.join('\n');
   }, [typeLabel, occasion, formattedDate, timeLabel, location, colors, budget, contact, notes]);
 

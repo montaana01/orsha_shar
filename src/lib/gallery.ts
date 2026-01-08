@@ -8,7 +8,7 @@ export function listGalleryImages(slug: string): string[] {
   const files = fs
     .readdirSync(dir)
     .filter((f) => !f.startsWith('.') && /\.(png|jpe?g|webp|gif)$/i.test(f))
-    .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+    .toSorted((a, b) => a.localeCompare(b, 'en', { numeric: true }));
 
   return files.map((f) => `/gallery/${slug}/${f}`);
 }

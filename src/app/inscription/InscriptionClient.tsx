@@ -2684,30 +2684,60 @@ function pathsToDxf(groups: DxfPathGroup[], mmPerPx: number): string {
       })),
     );
 
-  const lines: string[] = [];
-  lines.push('0', 'SECTION', '2', 'HEADER');
-  lines.push('9', '$ACADVER', '1', 'AC1015');
-  lines.push('9', '$INSUNITS', '70', '4'); // millimeters
-  lines.push('9', '$MEASUREMENT', '70', '1'); // metric
-  lines.push('0', 'ENDSEC');
-  lines.push('0', 'SECTION', '2', 'TABLES', '0', 'ENDSEC');
-  lines.push('0', 'SECTION', '2', 'ENTITIES');
+  const header = [
+    '0',
+    'SECTION',
+    '2',
+    'HEADER',
+    '9',
+    '$ACADVER',
+    '1',
+    'AC1015',
+    '9',
+    '$INSUNITS',
+    '70',
+    '4', // millimeters
+    '9',
+    '$MEASUREMENT',
+    '70',
+    '1', // metric
+    '0',
+    'ENDSEC',
+    '0',
+    'SECTION',
+    '2',
+    'TABLES',
+    '0',
+    'ENDSEC',
+    '0',
+    'SECTION',
+    '2',
+    'ENTITIES',
+  ];
 
-  for (const seg of segments) {
-    if (seg.points.length < 2) continue;
-    lines.push('0', 'LWPOLYLINE');
-    lines.push('8', seg.layer); // layer
-    lines.push('90', String(seg.points.length));
-    lines.push('70', seg.closed ? '1' : '0');
-    for (const p of seg.points) {
-      lines.push('10', p.x.toFixed(3));
-      lines.push('20', (-p.y).toFixed(3)); // invert Y to match CAD coords
-    }
-  }
+  const entities = segments.flatMap((seg) => {
+    if (seg.points.length < 2) return [];
+    const coords = seg.points.flatMap((p) => [
+      '10',
+      p.x.toFixed(3),
+      '20',
+      (-p.y).toFixed(3), // invert Y to match CAD coords
+    ]);
+    return [
+      '0',
+      'LWPOLYLINE',
+      '8',
+      seg.layer, // layer
+      '90',
+      String(seg.points.length),
+      '70',
+      seg.closed ? '1' : '0',
+      ...coords,
+    ];
+  });
 
-  lines.push('0', 'ENDSEC');
-  lines.push('0', 'EOF');
-  return lines.join('\n');
+  const footer = ['0', 'ENDSEC', '0', 'EOF'];
+  return [...header, ...entities, ...footer].join('\n');
 }
 
 type V = { x: number; y: number };
