@@ -25,7 +25,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(url, 303);
   }
 
-  await execute('UPDATE fonts SET name = ?, visible = ?, position = ? WHERE id = ? AND is_deleted = 0', [name, visible, position, id]);
+  await execute(
+    'UPDATE fonts SET name = ?, visible = ?, position = ? WHERE id = ? AND is_deleted = 0',
+    [name, visible, position, id],
+  );
 
   const url = buildRedirectUrl(request, '/yakauleu');
   if (tab) url.searchParams.set('tab', tab);

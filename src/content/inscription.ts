@@ -5,7 +5,7 @@ export const PRODUCT_LABEL: Record<ProductType, string> = {
   foilHeart: 'Сердце (фольга)',
   foilCircle: 'Круг (фольга)',
   bubble: 'Шар Bubbles',
-  box: 'Коробка сюрприз'
+  box: 'Коробка сюрприз',
 };
 
 export const PRODUCT_FILE_LABEL: Record<ProductType, string> = {
@@ -13,7 +13,7 @@ export const PRODUCT_FILE_LABEL: Record<ProductType, string> = {
   foilHeart: 'foil-heart',
   foilCircle: 'foil-circle',
   bubble: 'bubbles',
-  box: 'box'
+  box: 'box',
 };
 
 export const PRODUCT_SIZES_CM: Record<ProductType, number[]> = {
@@ -21,7 +21,7 @@ export const PRODUCT_SIZES_CM: Record<ProductType, number[]> = {
   foilStar: [30, 34, 50],
   foilHeart: [30, 34, 50],
   foilCircle: [30, 50, 60, 65],
-  bubble: [42, 50, 65]
+  bubble: [42, 50, 65],
 };
 
 /**
@@ -33,7 +33,7 @@ export const SAFE_INSET: Record<ProductType, number> = {
   foilStar: 0.76,
   foilHeart: 0.78,
   foilCircle: 0.8,
-  bubble: 0.8
+  bubble: 0.8,
 };
 
 /**
@@ -48,29 +48,27 @@ export const PAYLOAD_LIMIT_G: Record<ProductType, Record<number, number>> = {
   foilStar: {
     30: 8,
     34: 9,
-    50: 11
+    50: 11,
   },
   foilHeart: {
     30: 8,
     34: 9,
-    50: 11
+    50: 11,
   },
   foilCircle: {
     30: 8,
     50: 9,
     60: 10,
-    65: 11
+    65: 11,
   },
   bubble: {
     42: 9,
     50: 10,
-    65: 11
-  }
+    65: 11,
+  },
 };
 
-export const MATERIALS = [
-  { id: 'vinyl', label: 'Винил (наклейка)', gPerCm2: 0.1 },
-] as const;
+export const MATERIALS = [{ id: 'vinyl', label: 'Винил (наклейка)', gPerCm2: 0.1 }] as const;
 
 export const COLOR_PRESETS = [
   { id: 'white', label: 'Белый', value: '#FFFFFF' },
@@ -87,36 +85,36 @@ export const FONT_PRESETS = [
     label: 'Arctika Script',
     css: "'Arctika Script', system-ui, -apple-system, Segoe UI, Roboto, Arial",
     fileName: 'Arctika_script.ttf',
-    fileUrl: '/fonts/Arctika_script.ttf'
+    fileUrl: '/fonts/Arctika_script.ttf',
   },
   {
     id: 'bad-script',
     label: 'Bad Script',
     css: "'Bad Script', system-ui, -apple-system, Segoe UI, Roboto, Arial",
     fileName: 'Bad_Script.ttf',
-    fileUrl: '/fonts/Bad_Script.ttf'
+    fileUrl: '/fonts/Bad_Script.ttf',
   },
   {
     id: 'bodega-script',
     label: 'Bodega Script',
     css: "'Bodega Script', system-ui, -apple-system, Segoe UI, Roboto, Arial",
     fileName: 'Bodega Script.ttf',
-    fileUrl: '/fonts/Bodega%20Script.ttf'
+    fileUrl: '/fonts/Bodega%20Script.ttf',
   },
   {
     id: 'corinthia',
     label: 'Corinthia',
     css: "'Corinthia', system-ui, -apple-system, Segoe UI, Roboto, Arial",
     fileName: 'Corinthia.ttf',
-    fileUrl: '/fonts/Corinthia.ttf'
+    fileUrl: '/fonts/Corinthia.ttf',
   },
   {
     id: 'katherine',
     label: 'Katherine',
     css: "'Katherine', system-ui, -apple-system, Segoe UI, Roboto, Arial",
     fileName: 'katherine.ttf',
-    fileUrl: '/fonts/katherine.ttf'
-  }
+    fileUrl: '/fonts/katherine.ttf',
+  },
 ] as const;
 
 export const DEFAULT_COVERAGE_FACTOR = 0.55;

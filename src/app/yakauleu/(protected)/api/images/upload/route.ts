@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   const categoryRows = await query<{ slug: string }>(
     'SELECT slug FROM categories WHERE id = ? AND is_deleted = 0 LIMIT 1',
-    [categoryId]
+    [categoryId],
   );
   const slug = normalizeSlug(categoryRows[0]?.slug ?? '');
   if (!slug) {
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
   const positions = await query<{ maxPos: number | null }>(
     'SELECT MAX(position) as maxPos FROM category_images WHERE category_id = ?',
-    [categoryId]
+    [categoryId],
   );
   let position = Number(positions[0]?.maxPos ?? 0) || 0;
 
@@ -45,7 +45,10 @@ export async function POST(request: NextRequest) {
   let invalid = false;
   for (const file of files) {
     const original = file.name || 'image';
-    if (!isAllowedExtension(original, ALLOWED_EXTS) || !isSafeFileSize(file.size, MAX_IMAGE_BYTES)) {
+    if (
+      !isAllowedExtension(original, ALLOWED_EXTS) ||
+      !isSafeFileSize(file.size, MAX_IMAGE_BYTES)
+    ) {
       invalid = true;
       continue;
     }
@@ -64,7 +67,7 @@ export async function POST(request: NextRequest) {
     await writeFileSafe(path.join(dir, fileName), buf);
     await execute(
       'INSERT INTO category_images (category_id, file_name, visible, position) VALUES (?, ?, 1, ?)',
-      [categoryId, fileName, position]
+      [categoryId, fileName, position],
     );
   }
 

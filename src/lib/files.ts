@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 export function sanitizeFileName(name: string): string {
-  const base = name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const base = name.replace(/[^\w.-]/g, '_');
   return base.replace(/_+/g, '_');
 }
 
@@ -111,7 +111,9 @@ export async function removeArchivedPath(baseDir: string, relativePath: string):
   }
 }
 
-export async function getDiskUsage(targetPath: string): Promise<{ freeBytes: number; totalBytes: number; usedBytes: number }> {
+export async function getDiskUsage(
+  targetPath: string,
+): Promise<{ freeBytes: number; totalBytes: number; usedBytes: number }> {
   const stats = await fs.statfs(targetPath);
   const totalBytes = stats.blocks * stats.bsize;
   const freeBytes = stats.bavail * stats.bsize;

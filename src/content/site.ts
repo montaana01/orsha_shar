@@ -7,15 +7,15 @@ export const site = {
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://orsha-shar.by',
   contacts: {
     phones: ['+375297107027', '+375298165088'],
-    email: 'orsha.shar@gmail.com'
+    email: 'orsha.shar@gmail.com',
   },
   socials: {
     instagram: 'https://instagram.com/orsha_shar',
     instagramDm: 'https://ig.me/m/orsha_shar',
     vk: 'https://vk.com/orsha_shar',
     ok: 'https://ok.ru/orsha_shar',
-    telegram: process.env.NEXT_PUBLIC_TELEGRAM_URL ?? 'https://t.me/orshashar'
-  }
+    telegram: process.env.NEXT_PUBLIC_TELEGRAM_URL ?? 'https://t.me/orshashar',
+  },
 } as const;
 
 export function telHref(phoneE164orLocal: string): string {

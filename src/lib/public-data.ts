@@ -1,6 +1,5 @@
 import { categories as fallbackCategories } from '@/content/categories';
-import type { Category } from './data';
-import { getCategories, getCategoryBySlug } from './data';
+import { getCategories, getCategoryBySlug, type Category } from './data';
 
 const fallbackMapped: Category[] = fallbackCategories.map((category, index) => ({
   id: index + 1,
@@ -9,10 +8,12 @@ const fallbackMapped: Category[] = fallbackCategories.map((category, index) => (
   description: category.description,
   heroImage: category.heroImage,
   visible: true,
-  position: index
+  position: index,
 }));
 
-export async function getPublicCategories(opts: { allowFallback?: boolean } = {}): Promise<Category[]> {
+export async function getPublicCategories(
+  opts: { allowFallback?: boolean } = {},
+): Promise<Category[]> {
   const { allowFallback = true } = opts;
   const visible = await getCategories().catch(() => null);
   if (visible && visible.length) return visible;

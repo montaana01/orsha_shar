@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
      JOIN categories c ON c.id = i.category_id
      WHERE i.id = ? AND i.is_deleted = 1
      LIMIT 1`,
-    [id]
+    [id],
   );
   const image = rows[0];
   if (!image || image.category_deleted) {

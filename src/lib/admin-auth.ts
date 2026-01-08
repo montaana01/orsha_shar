@@ -38,7 +38,7 @@ export function verifyPassword(password: string, stored: string): boolean {
   const key = crypto.scryptSync(password, toUint8Array(salt), expected.length, {
     N: Number(nStr),
     r: Number(rStr),
-    p: Number(pStr)
+    p: Number(pStr),
   });
   return crypto.timingSafeEqual(toUint8Array(expected), toUint8Array(key));
 }
@@ -52,19 +52,23 @@ export async function findAdminByEmail(email: string): Promise<AdminUser | null>
   return rows[0] ?? null;
 }
 
-export async function createAdminSession(adminId: number): Promise<{ token: string; expiresAt: Date }> {
+export async function createAdminSession(
+  adminId: number,
+): Promise<{ token: string; expiresAt: Date }> {
   const token = crypto.randomBytes(32).toString('hex');
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   await execute('INSERT INTO admin_sessions (admin_id, token_hash, expires_at) VALUES (?, ?, ?)', [
     adminId,
     tokenHash,
-    expiresAt.toISOString().slice(0, 19).replace('T', ' ')
+    expiresAt.toISOString().slice(0, 19).replace('T', ' '),
   ]);
   return { token, expiresAt };
 }
 
-export async function getAdminFromToken(token: string): Promise<{ id: number; email: string } | null> {
+export async function getAdminFromToken(
+  token: string,
+): Promise<{ id: number; email: string } | null> {
   const tokenHash = hashToken(token);
   const rows = await query<AdminSession & { email: string }>(
     `SELECT s.id, s.admin_id, s.token_hash, s.expires_at, u.email
@@ -72,7 +76,7 @@ export async function getAdminFromToken(token: string): Promise<{ id: number; em
      JOIN admin_users u ON u.id = s.admin_id
      WHERE s.token_hash = ? AND u.is_active = 1
      LIMIT 1`,
-    [tokenHash]
+    [tokenHash],
   );
   const session = rows[0];
   if (!session) return null;
@@ -105,7 +109,7 @@ export function buildAdminSessionCookie(token: string, expiresAt: Date) {
     sameSite: 'lax' as const,
     secure: process.env.NODE_ENV === 'production',
     expires: expiresAt,
-    path: '/'
+    path: '/',
   };
 }
 
@@ -117,6 +121,6 @@ export function buildAdminSessionCookieClear() {
     sameSite: 'lax' as const,
     secure: process.env.NODE_ENV === 'production',
     expires: new Date(0),
-    path: '/'
+    path: '/',
   };
 }

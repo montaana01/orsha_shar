@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
      JOIN categories c ON c.id = i.category_id
      WHERE i.id = ? AND i.is_deleted = 0 AND c.is_deleted = 0
      LIMIT 1`,
-    [id]
+    [id],
   );
   const row = rows[0];
   if (!row) {

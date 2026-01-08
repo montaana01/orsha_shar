@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   const rows = await query<{ slug: string }>(
     'SELECT slug FROM categories WHERE id = ? AND is_deleted = 0 LIMIT 1',
-    [id]
+    [id],
   );
   const category = rows[0];
   if (!category) {
@@ -38,7 +38,9 @@ export async function POST(request: NextRequest) {
   }
 
   await execute('UPDATE categories SET is_deleted = 1, visible = 0 WHERE id = ?', [id]);
-  await execute('UPDATE category_images SET is_deleted = 1, visible = 0 WHERE category_id = ?', [id]);
+  await execute('UPDATE category_images SET is_deleted = 1, visible = 0 WHERE category_id = ?', [
+    id,
+  ]);
 
   const publicDir = path.resolve(process.cwd(), 'public');
   await archivePath(publicDir, path.join('gallery', category.slug));

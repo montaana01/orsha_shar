@@ -52,7 +52,7 @@ if (printSql) {
   const safeHash = escapeSqlString(passwordHash);
   console.log(
     `INSERT INTO admin_users (email, password_hash, is_active) VALUES ('${safeEmail}', '${safeHash}', 1)\n` +
-      `ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash), is_active=1;`
+      `ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash), is_active=1;`,
   );
   process.exit(0);
 }
@@ -67,10 +67,13 @@ const pool = mysql.createPool({
   user,
   password: process.env.MYSQL_PASSWORD,
   database,
-  port: Number(process.env.MYSQL_PORT || '3306')
+  port: Number(process.env.MYSQL_PORT || '3306'),
 });
 
-await pool.execute('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)', [email, passwordHash]);
+await pool.execute('INSERT INTO admin_users (email, password_hash) VALUES (?, ?)', [
+  email,
+  passwordHash,
+]);
 await pool.end();
 
 console.log(`Admin created: ${email}`);

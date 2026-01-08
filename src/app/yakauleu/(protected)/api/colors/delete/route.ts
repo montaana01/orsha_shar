@@ -24,7 +24,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(url, 303);
   }
 
-  await execute('UPDATE colors SET is_deleted = 1, visible = 0 WHERE id = ? AND is_deleted = 0', [id]);
+  await execute('UPDATE colors SET is_deleted = 1, visible = 0 WHERE id = ? AND is_deleted = 0', [
+    id,
+  ]);
 
   const url = buildRedirectUrl(request, '/yakauleu');
   if (tab) url.searchParams.set('tab', tab);

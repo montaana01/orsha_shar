@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
-import { buildAdminSessionCookie, createAdminSession, findAdminByEmail, verifyPassword } from '@/lib/admin-auth';
+import {
+  buildAdminSessionCookie,
+  createAdminSession,
+  findAdminByEmail,
+  verifyPassword,
+} from '@/lib/admin-auth';
 import { buildRedirectUrl } from '@/lib/request-url';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase();
   const password = String(formData.get('password') ?? '');
 
   const emailOk = email.length <= 190 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

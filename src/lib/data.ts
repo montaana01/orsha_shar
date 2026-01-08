@@ -75,7 +75,7 @@ export async function getCategories(opts: { includeHidden?: boolean } = {}): Pro
     `SELECT id, slug, title, description, hero_image, visible, position
      FROM categories
      WHERE is_deleted = 0 ${includeHidden ? '' : 'AND visible = 1'}
-     ORDER BY position ASC, id ASC`
+     ORDER BY position ASC, id ASC`,
   );
 
   return rows.map((row) => ({
@@ -85,7 +85,7 @@ export async function getCategories(opts: { includeHidden?: boolean } = {}): Pro
     description: row.description,
     heroImage: row.hero_image,
     visible: Boolean(row.visible),
-    position: row.position
+    position: row.position,
   }));
 }
 
@@ -103,7 +103,7 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
      FROM categories
      WHERE slug = ? AND is_deleted = 0
      LIMIT 1`,
-    [slug]
+    [slug],
   );
 
   const row = rows[0];
@@ -115,11 +115,14 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
     description: row.description,
     heroImage: row.hero_image,
     visible: Boolean(row.visible),
-    position: row.position
+    position: row.position,
   };
 }
 
-export async function getCategoryImages(categoryId: number, opts: { includeHidden?: boolean } = {}): Promise<CategoryImage[]> {
+export async function getCategoryImages(
+  categoryId: number,
+  opts: { includeHidden?: boolean } = {},
+): Promise<CategoryImage[]> {
   const { includeHidden = false } = opts;
   const rows = await query<{
     id: number;
@@ -135,7 +138,7 @@ export async function getCategoryImages(categoryId: number, opts: { includeHidde
      WHERE i.category_id = ? AND i.is_deleted = 0 AND c.is_deleted = 0
      ${includeHidden ? '' : 'AND i.visible = 1'}
      ORDER BY i.position ASC, i.id ASC`,
-    [categoryId]
+    [categoryId],
   );
 
   return rows.map((row) => ({
@@ -145,11 +148,14 @@ export async function getCategoryImages(categoryId: number, opts: { includeHidde
     fileName: row.file_name,
     url: `/gallery/${row.slug}/${row.file_name}`,
     visible: Boolean(row.visible),
-    position: row.position
+    position: row.position,
   }));
 }
 
-export async function getCategoryImagesBySlug(slug: string, opts: { includeHidden?: boolean } = {}): Promise<CategoryImage[]> {
+export async function getCategoryImagesBySlug(
+  slug: string,
+  opts: { includeHidden?: boolean } = {},
+): Promise<CategoryImage[]> {
   const { includeHidden = false } = opts;
   const rows = await query<{
     id: number;
@@ -165,7 +171,7 @@ export async function getCategoryImagesBySlug(slug: string, opts: { includeHidde
      WHERE c.slug = ? AND i.is_deleted = 0 AND c.is_deleted = 0
      ${includeHidden ? '' : 'AND i.visible = 1'}
      ORDER BY i.position ASC, i.id ASC`,
-    [slug]
+    [slug],
   );
 
   return rows.map((row) => ({
@@ -175,7 +181,7 @@ export async function getCategoryImagesBySlug(slug: string, opts: { includeHidde
     fileName: row.file_name,
     url: `/gallery/${row.slug}/${row.file_name}`,
     visible: Boolean(row.visible),
-    position: row.position
+    position: row.position,
   }));
 }
 
@@ -191,7 +197,7 @@ export async function getFonts(opts: { includeHidden?: boolean } = {}): Promise<
     `SELECT id, name, file_name, visible, position
      FROM fonts
      WHERE is_deleted = 0 ${includeHidden ? '' : 'AND visible = 1'}
-     ORDER BY position ASC, id ASC`
+     ORDER BY position ASC, id ASC`,
   );
 
   return rows.map((row) => ({
@@ -200,7 +206,7 @@ export async function getFonts(opts: { includeHidden?: boolean } = {}): Promise<
     fileName: row.file_name,
     fileUrl: `/fonts/${row.file_name}`,
     visible: Boolean(row.visible),
-    position: row.position
+    position: row.position,
   }));
 }
 
@@ -216,7 +222,7 @@ export async function getColors(opts: { includeHidden?: boolean } = {}): Promise
     `SELECT id, name, value, visible, position
      FROM colors
      WHERE is_deleted = 0 ${includeHidden ? '' : 'AND visible = 1'}
-     ORDER BY position ASC, id ASC`
+     ORDER BY position ASC, id ASC`,
   );
 
   return rows.map((row) => ({
@@ -224,7 +230,7 @@ export async function getColors(opts: { includeHidden?: boolean } = {}): Promise
     name: row.name,
     value: row.value,
     visible: Boolean(row.visible),
-    position: row.position
+    position: row.position,
   }));
 }
 
@@ -249,7 +255,7 @@ export async function getExports(): Promise<ExportRecord[]> {
     `SELECT id, session_id, export_id, project_hash, product, size_cm, font_id, font_name, color, client_name, client_contact, details_json, svg_path, dxf_path, created_at
      FROM inscription_exports
      WHERE is_deleted = 0
-     ORDER BY created_at DESC, id DESC`
+     ORDER BY created_at DESC, id DESC`,
   );
 
   return rows.map((row) => ({
@@ -267,7 +273,7 @@ export async function getExports(): Promise<ExportRecord[]> {
     detailsJson: row.details_json ?? '',
     svgPath: row.svg_path,
     dxfPath: row.dxf_path,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   }));
 }
 
@@ -285,7 +291,7 @@ export async function getDeletedCategories(): Promise<DeletedCategory[]> {
     `SELECT id, slug, title, description, hero_image, visible, position, updated_at
      FROM categories
      WHERE is_deleted = 1
-     ORDER BY updated_at DESC, id DESC`
+     ORDER BY updated_at DESC, id DESC`,
   );
 
   return rows.map((row) => ({
@@ -296,7 +302,7 @@ export async function getDeletedCategories(): Promise<DeletedCategory[]> {
     heroImage: row.hero_image,
     visible: Boolean(row.visible),
     position: row.position,
-    deletedAt: row.updated_at
+    deletedAt: row.updated_at,
   }));
 }
 
@@ -314,7 +320,7 @@ export async function getDeletedCategoryImages(): Promise<DeletedCategoryImage[]
      FROM category_images i
      JOIN categories c ON c.id = i.category_id
      WHERE i.is_deleted = 1
-     ORDER BY i.updated_at DESC, i.id DESC`
+     ORDER BY i.updated_at DESC, i.id DESC`,
   );
 
   return rows.map((row) => ({
@@ -325,7 +331,7 @@ export async function getDeletedCategoryImages(): Promise<DeletedCategoryImage[]
     url: `/deleted/gallery/${row.slug}/${row.file_name}`,
     visible: Boolean(row.visible),
     position: row.position,
-    deletedAt: row.updated_at
+    deletedAt: row.updated_at,
   }));
 }
 
@@ -341,7 +347,7 @@ export async function getDeletedFonts(): Promise<DeletedFont[]> {
     `SELECT id, name, file_name, visible, position, updated_at
      FROM fonts
      WHERE is_deleted = 1
-     ORDER BY updated_at DESC, id DESC`
+     ORDER BY updated_at DESC, id DESC`,
   );
 
   return rows.map((row) => ({
@@ -351,7 +357,7 @@ export async function getDeletedFonts(): Promise<DeletedFont[]> {
     fileUrl: `/deleted/fonts/${row.file_name}`,
     visible: Boolean(row.visible),
     position: row.position,
-    deletedAt: row.updated_at
+    deletedAt: row.updated_at,
   }));
 }
 
@@ -367,7 +373,7 @@ export async function getDeletedColors(): Promise<DeletedColor[]> {
     `SELECT id, name, value, visible, position, updated_at
      FROM colors
      WHERE is_deleted = 1
-     ORDER BY updated_at DESC, id DESC`
+     ORDER BY updated_at DESC, id DESC`,
   );
 
   return rows.map((row) => ({
@@ -376,7 +382,7 @@ export async function getDeletedColors(): Promise<DeletedColor[]> {
     value: row.value,
     visible: Boolean(row.visible),
     position: row.position,
-    deletedAt: row.updated_at
+    deletedAt: row.updated_at,
   }));
 }
 
@@ -402,7 +408,7 @@ export async function getDeletedExports(): Promise<DeletedExport[]> {
     `SELECT id, session_id, export_id, project_hash, product, size_cm, font_id, font_name, color, client_name, client_contact, details_json, svg_path, dxf_path, created_at, updated_at
      FROM inscription_exports
      WHERE is_deleted = 1
-     ORDER BY updated_at DESC, id DESC`
+     ORDER BY updated_at DESC, id DESC`,
   );
 
   return rows.map((row) => ({
@@ -421,6 +427,6 @@ export async function getDeletedExports(): Promise<DeletedExport[]> {
     svgPath: row.svg_path,
     dxfPath: row.dxf_path,
     createdAt: row.created_at,
-    deletedAt: row.updated_at
+    deletedAt: row.updated_at,
   }));
 }

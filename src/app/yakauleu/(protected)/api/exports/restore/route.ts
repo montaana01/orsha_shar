@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
   const rows = await query<ExportRow>(
     'SELECT id, session_id, export_id, svg_path, dxf_path, updated_at FROM inscription_exports WHERE id = ? AND is_deleted = 1 LIMIT 1',
-    [id]
+    [id],
   );
   const exp = rows[0];
   if (!exp) {

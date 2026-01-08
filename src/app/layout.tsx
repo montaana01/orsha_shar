@@ -13,32 +13,31 @@ export const runtime = 'nodejs';
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#ffffff'
+  themeColor: '#ffffff',
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
     default: 'Гелиевые шары в Орше — Орша Шар',
-    template: '%s — Орша Шар'
+    template: '%s — Орша Шар',
   },
-  description:
-    'Гелиевые шары, фотозоны, украшения для торжеств в Орше.',
+  description: 'Гелиевые шары, фотозоны, украшения для торжеств в Орше.',
   icons: {
     icon: [
       { url: '/favicon/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/favicon/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png' }
+      { url: '/favicon/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [{ url: '/favicon/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' }],
-    shortcut: '/favicon/web-app-manifest-192x192.png'
+    shortcut: '/favicon/web-app-manifest-192x192.png',
   },
   openGraph: {
     type: 'website',
     locale: site.defaultLocale,
     url: site.url,
     siteName: site.name,
-    images: [{ url: '/assets/hero-desk.webp' }]
-  }
+    images: [{ url: '/assets/hero-desk.webp' }],
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -63,7 +62,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <noscript
           dangerouslySetInnerHTML={{
             __html:
-              '<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-N8RX75N9" height="0" width="0" style="display:none;visibility:hidden"></iframe>'
+              '<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-N8RX75N9" height="0" width="0" style="display:none;visibility:hidden"></iframe>',
           }}
         />
         <Script id="yandex-metrika" strategy="lazyOnload">
@@ -76,7 +75,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 ym(72543040, 'init', {webvisor:true, clickmap:true, accurateTrackBounce:true, trackLinks:true});`}
         </Script>
-        <Script src="https://www.googletagmanager.com/gtag/js?id=G-NZQNHDRLX7" strategy="lazyOnload" />
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-NZQNHDRLX7"
+          strategy="lazyOnload"
+        />
         <Script id="google-gtag" strategy="lazyOnload">
           {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
@@ -90,7 +92,7 @@ gtag('config', 'G-NZQNHDRLX7');`}
         <noscript
           dangerouslySetInnerHTML={{
             __html:
-              '<div><img src="https://mc.yandex.ru/watch/72543040" style="position:absolute; left:-9999px;" alt="" /></div>'
+              '<div><img src="https://mc.yandex.ru/watch/72543040" style="position:absolute; left:-9999px;" alt="" /></div>',
           }}
         />
       </body>

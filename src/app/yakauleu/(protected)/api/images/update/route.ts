@@ -19,7 +19,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu?error=images'), 303);
   }
 
-  await execute('UPDATE category_images SET visible = ?, position = ? WHERE id = ? AND is_deleted = 0', [visible, position, id]);
+  await execute(
+    'UPDATE category_images SET visible = ?, position = ? WHERE id = ? AND is_deleted = 0',
+    [visible, position, id],
+  );
 
   return NextResponse.redirect(buildRedirectUrl(request, '/yakauleu'), 303);
 }

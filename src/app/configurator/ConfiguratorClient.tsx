@@ -1,13 +1,21 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Category } from '@/lib/data';
 import { site } from '@/content/site';
 
 type RequestType = string | 'other';
 
-export function ConfiguratorClient({ initialType, categories }: { initialType: string | undefined; categories: Category[] }) {
-  const normalizedInitial: RequestType = categories.some((c) => c.slug === initialType) ? (initialType as RequestType) : 'other';
+export function ConfiguratorClient({
+  initialType,
+  categories,
+}: {
+  initialType: string | undefined;
+  categories: Category[];
+}) {
+  const normalizedInitial: RequestType = categories.some((c) => c.slug === initialType)
+    ? (initialType as RequestType)
+    : 'other';
   const [type, setType] = useState<RequestType>(normalizedInitial);
   const [occasion, setOccasion] = useState('');
   const [date, setDate] = useState('');
@@ -20,6 +28,8 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
   const [budget, setBudget] = useState('');
   const [colors, setColors] = useState('');
   const [notes, setNotes] = useState('');
+  const [copyNotice, setCopyNotice] = useState('');
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const requiredStatus = useMemo(() => {
     const missing: string[] = [];
@@ -77,6 +87,18 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
     return lines.join('\n');
   }, [typeLabel, occasion, formattedDate, timeLabel, location, colors, budget, contact, notes]);
 
+  useEffect(() => {
+    setCopyNotice('');
+  }, [requestText]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const telegramShare = useMemo(() => {
     const base = 'https://t.me/orshashar';
     const url = new URL(base);
@@ -87,11 +109,16 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
 
   async function copy() {
     if (!requiredStatus.ready) {
-      alert('Заполните обязательные поля заявки.');
       return;
     }
     await navigator.clipboard.writeText(requestText);
-    alert('Текст заявки скопирован.');
+    setCopyNotice('Текст заявки скопирован.');
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+    }
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopyNotice('');
+    }, 2500);
   }
 
   return (
@@ -100,14 +127,17 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
         <h1 className="section__title" style={{ marginTop: 0 }}>
           Конфигуратор заявки
         </h1>
-        <p className="muted">
-          Заполните поля — ниже появится текст заявки.
-        </p>
+        <p className="muted">Заполните поля — ниже появится текст заявки.</p>
 
         <div className="form">
           <label className="field">
             <span className="field__label">Категория</span>
-            <select className="field__control" name="category" value={type} onChange={(event) => setType(event.target.value as RequestType)}>
+            <select
+              className="field__control"
+              name="category"
+              value={type}
+              onChange={(event) => setType(event.target.value as RequestType)}
+            >
               {categories.map((category) => (
                 <option key={category.slug} value={category.slug}>
                   {category.title}
@@ -131,7 +161,14 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
 
           <label className="field">
             <span className="field__label">Дата</span>
-            <input className="field__control" name="date" type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
+            <input
+              className="field__control"
+              name="date"
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              required
+            />
           </label>
 
           <div className="field">
@@ -244,12 +281,26 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
 
           <label className="field">
             <span className="field__label">Бюджет</span>
-            <input className="field__control" name="budget" value={budget} onChange={(event) => setBudget(event.target.value)} placeholder="Например: до 100 BYN" required />
+            <input
+              className="field__control"
+              name="budget"
+              value={budget}
+              onChange={(event) => setBudget(event.target.value)}
+              placeholder="Например: до 100 BYN"
+              required
+            />
           </label>
 
           <label className="field field--full">
             <span className="field__label">Комментарий</span>
-            <textarea className="field__control" name="notes" rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Размеры, надпись, наполнение, пожелания..." />
+            <textarea
+              className="field__control"
+              name="notes"
+              rows={4}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Размеры, надпись, наполнение, пожелания..."
+            />
           </label>
         </div>
       </div>
@@ -261,9 +312,19 @@ export function ConfiguratorClient({ initialType, categories }: { initialType: s
             Заполните обязательные поля: {requiredStatus.missing.join(', ')}.
           </div>
         ) : null}
+        {copyNotice ? (
+          <div className="notice" role="status" style={{ marginBottom: 12 }}>
+            {copyNotice}
+          </div>
+        ) : null}
         <pre className="pre">{requestText}</pre>
         <div className="hero__actions">
-          <button className="btn btn--primary" onClick={copy} type="button" disabled={!requiredStatus.ready}>
+          <button
+            className="btn btn--primary"
+            onClick={copy}
+            type="button"
+            disabled={!requiredStatus.ready}
+          >
             Скопировать
           </button>
           <a

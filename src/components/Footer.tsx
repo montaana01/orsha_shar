@@ -71,7 +71,9 @@ export function Footer() {
       </div>
 
       <div className="container footer__bottom">
-        <span className="muted">© {new Date().getFullYear()} {site.legalName}</span>
+        <span className="muted">
+          © {new Date().getFullYear()} {site.legalName}
+        </span>
       </div>
     </footer>
   );

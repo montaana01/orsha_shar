@@ -24,7 +24,11 @@ export type ButtonProps = LinkProps | NativeButtonProps;
 
 export function Button(props: ButtonProps) {
   const variant = props.variant ?? 'primary';
-  const className = ['btn', `btn--${variant}`, 'className' in props && props.className ? props.className : '']
+  const className = [
+    'btn',
+    `btn--${variant}`,
+    'className' in props && props.className ? props.className : '',
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -32,7 +36,13 @@ export function Button(props: ButtonProps) {
     const { href, children, external, ariaLabel } = props;
     if (external) {
       return (
-        <a className={className} href={href} target="_blank" rel="noopener noreferrer" aria-label={ariaLabel}>
+        <a
+          className={className}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={ariaLabel}
+        >
           {children}
         </a>
       );

@@ -1,5 +1,4 @@
-import type { ProductType } from '@/content/inscription';
-import { SAFE_INSET } from '@/content/inscription';
+import { SAFE_INSET, type ProductType } from '@/content/inscription';
 
 export type Point = { x: number; y: number };
 
@@ -64,7 +63,7 @@ export function heartPoints(sizePx: number): Point[] {
     [p0, p1, p2, p3],
     [p3, p4, p5, p6],
     [p6, p7, p8, p9],
-    [p9, p10, p11, p12]
+    [p9, p10, p11, p12],
   ] as const;
 
   const raw: Point[] = [];
@@ -91,7 +90,7 @@ export function heartPoints(sizePx: number): Point[] {
 
   return raw.map((p) => ({
     x: cx + (p.x - centerX) * scale,
-    y: cy + (p.y - centerY) * scale
+    y: cy + (p.y - centerY) * scale,
   }));
 }
 
@@ -102,13 +101,20 @@ export function boxPoints(sizePx: number): Point[] {
     { x: min, y: min },
     { x: max, y: min },
     { x: max, y: max },
-    { x: min, y: max }
+    { x: min, y: max },
   ];
 }
 
 export function pointsToPath(points: Point[]): string {
   if (!points.length) return '';
-  return `M ${points[0].x} ${points[0].y} ` + points.slice(1).map((p) => `L ${p.x} ${p.y}`).join(' ') + ' Z';
+  return (
+    `M ${points[0].x} ${points[0].y} ` +
+    points
+      .slice(1)
+      .map((p) => `L ${p.x} ${p.y}`)
+      .join(' ') +
+    ' Z'
+  );
 }
 
 export type ShapeDef =
@@ -148,7 +154,7 @@ export function getShape(type: ProductType, sizePx: number): ShapeDef {
       outlinePath: pointsToPath(outer),
       safePath: pointsToPath(safe),
       outerPoints: outer,
-      safePoints: safe
+      safePoints: safe,
     };
   }
 
@@ -163,7 +169,7 @@ export function getShape(type: ProductType, sizePx: number): ShapeDef {
       outlinePath: pointsToPath(outer),
       safePath: pointsToPath(safe),
       outerPoints: outer,
-      safePoints: safe
+      safePoints: safe,
     };
   }
 
@@ -178,7 +184,7 @@ export function getShape(type: ProductType, sizePx: number): ShapeDef {
       outlinePath: pointsToPath(outer),
       safePath: pointsToPath(safe),
       outerPoints: outer,
-      safePoints: safe
+      safePoints: safe,
     };
   }
 
@@ -192,7 +198,7 @@ export function getShape(type: ProductType, sizePx: number): ShapeDef {
     outlinePath: circlePath(sizePx, outerRadius),
     safePath: circlePath(sizePx, safeRadius),
     outerRadius,
-    safeRadius
+    safeRadius,
   };
 }
 
@@ -205,7 +211,8 @@ export function pointInPolygon(poly: Point[], p: Point): boolean {
     const xj = poly[j].x;
     const yj = poly[j].y;
 
-    const intersect = yi > p.y !== yj > p.y && p.x < ((xj - xi) * (p.y - yi)) / (yj - yi + 0.0000001) + xi;
+    const intersect =
+      yi > p.y !== yj > p.y && p.x < ((xj - xi) * (p.y - yi)) / (yj - yi + 0.0000001) + xi;
     if (intersect) inside = !inside;
   }
   return inside;

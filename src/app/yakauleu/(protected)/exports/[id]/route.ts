@@ -27,7 +27,7 @@ function formatDateStamp(date: Date) {
 }
 
 function sanitizeFileTag(input: string) {
-  const cleaned = input.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
+  const cleaned = input.replace(/[^\w-]/g, '').toLowerCase();
   return cleaned || 'item';
 }
 
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const rows = await query<ExportRow>(
     'SELECT id, session_id, export_id, product, size_cm, created_at, svg_path, dxf_path FROM inscription_exports WHERE id = ? AND is_deleted = 0 LIMIT 1',
-    [exportId]
+    [exportId],
   );
   const row = rows[0];
   if (!row) {
@@ -80,8 +80,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return new NextResponse(data, {
       headers: {
         'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${baseName}${fileSuffix}.${ext}"`
-      }
+        'Content-Disposition': `attachment; filename="${baseName}${fileSuffix}.${ext}"`,
+      },
     });
   } catch {
     return NextResponse.json({ error: 'File not found' }, { status: 404 });

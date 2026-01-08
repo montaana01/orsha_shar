@@ -18,9 +18,9 @@ export function Header({ categories }: { categories: Category[] }) {
   const navItems: NavItem[] = useMemo(
     () => [
       ...categories.map((c) => ({ href: `/${c.slug}`, label: c.title })),
-      { href: '/configurator', label: 'Заявка' }
+      { href: '/configurator', label: 'Заявка' },
     ],
-    [categories]
+    [categories],
   );
 
   const closeMenus = () => {
@@ -39,7 +39,15 @@ export function Header({ categories }: { categories: Category[] }) {
       <div className="container header__inner">
         <Link href="/" className="header__brand" aria-label={`${site.name} — главная`}>
           <span className="header__mark" aria-hidden="true">
-            <Image src="/assets/orsha-shar.webp" alt="Orsha-shar" width={60} height={60} sizes="60px" quality={60} priority />
+            <Image
+              src="/assets/orsha-shar.webp"
+              alt="Orsha-shar"
+              width={60}
+              height={60}
+              sizes="60px"
+              quality={60}
+              priority
+            />
           </span>
           <span className="header__brandText">
             <span className="header__brandName">{site.name}</span>
@@ -49,7 +57,11 @@ export function Header({ categories }: { categories: Category[] }) {
 
         <nav className="nav nav--desktop" aria-label="Основная навигация">
           <details className="nav__dropdown" ref={catalogRef}>
-            <summary className="nav__link nav__link--summary" aria-label="Открыть каталог" role="button">
+            <summary
+              className="nav__link nav__link--summary"
+              aria-label="Открыть каталог"
+              role="button"
+            >
               Каталог
               <span className="nav__caret" aria-hidden="true" />
             </summary>
@@ -91,7 +103,12 @@ export function Header({ categories }: { categories: Category[] }) {
             Заявка
           </Link>
 
-          <a className="nav__link nav__link--cta" href={site.socials.telegram} target="_blank" rel="noopener noreferrer">
+          <a
+            className="nav__link nav__link--cta"
+            href={site.socials.telegram}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Telegram
           </a>
 
