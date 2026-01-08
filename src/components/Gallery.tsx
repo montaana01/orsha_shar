@@ -6,7 +6,7 @@ export function Gallery({ images, altPrefix }: { images: string[]; altPrefix: st
   return (
     <div className="gallery" role="list">
       {images.map((src, idx) => (
-        <div key={src} className="gallery__item" role="listitem">
+        <div key={src} className="gallery__item watermarked" role="listitem">
           <Image
             src={src}
             alt={`${altPrefix} — фото ${idx + 1}`}

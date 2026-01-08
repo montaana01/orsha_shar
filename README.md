@@ -33,13 +33,11 @@
 
 ## Стек
 
-- Next.js **14.2.35**
+- Next.js **15.5.9**
 - React **18**
 - TypeScript
 - ESLint + `eslint-config-next` (совместимые версии закреплены)
-- Шрифты через `next/font`:
-  - Inter (UI)
-  - Cormorant Garamond (заголовки)
+- MySQL (через `mysql2`)
 
 ---
 
@@ -64,6 +62,18 @@ npm run dev
 ```bash
 NEXT_PUBLIC_SITE_URL=https://orsha-shar.by
 NEXT_PUBLIC_TELEGRAM_URL=https://t.me/<ваш_username>
+MYSQL_HOST=127.0.0.1
+MYSQL_USER=orsha
+MYSQL_PASSWORD=secret
+MYSQL_DATABASE=orsha_shar
+MYSQL_PORT=3306
+```
+
+Для создания первого админа (скрипт ниже) можно использовать:
+
+```bash
+ADMIN_EMAIL=shar@orsha-shar.by
+ADMIN_PASSWORD=your_password
 ```
 
 ## Продакшн
@@ -73,11 +83,33 @@ npm run build
 npm run start
 ```
 
+## База данных и админ-панель
+
+a) Создайте таблицы:
+
+  ```bash
+  mysql -u <user> -p < db/schema.sql
+  ```
+  
+b) Создайте первого админа:
+
+  ```bash
+  ADMIN_EMAIL=shar@orsha-shar.by ADMIN_PASSWORD=your_password node scripts/create-admin.mjs
+  ```
+
+c) Откройте `/yakauleu` и управляйте категориями, фото, шрифтами и цветами.
+
+## Экспорты макетов
+
+- SVG (кривые) и DXF сохраняются на сервере при скачивании превью.
+- Файлы лежат в `storage/exports/<sessionId>/...` и доступны из админки.
+
 ## Контент
 
 - Контакты/соцсети: `src/content/site.ts`
-- Категории и описания: `src/content/categories.ts`
-- Галереи подтягиваются из `public/gallery/<slug>/...` автоматически (`src/lib/gallery.ts`)
+- Категории/описания/видимость: в БД (таблица `categories`), управление через `/yakauleu`
+- Галереи: файлы в `public/gallery/<slug>/...`, записи в БД (`category_images`)
+- Шрифты и цвета: в БД (`fonts`, `colors`), управление через `/yakauleu`
 
 ## Качество кода (ESLint / Prettier / Husky / Commitlint)
 
@@ -97,31 +129,14 @@ NEXT_PUBLIC_TELEGRAM_URL=https://t.me/orshashar
 
 ### Категории
 
-Категории описываются в:
-
-- `src/content/categories.ts`
-
-Каждая категория содержит:
-
-- `slug` (URL сегмент),
-- `title`,
-- `description`,
-- (опционально) `heroImage`.
+Категории редактируются через `/yakauleu` и хранятся в MySQL (`categories`).  
+`slug` используется как URL-сегмент.
 
 ### Как добавить/обновить фото в галерее
 
-1. Положите изображения в папку:
-   - `public/gallery/<slug>/`
-   Пример:
-   - `public/gallery/photozony/001.jpg`
-   - `public/gallery/photozony/002.jpg`
-
-2. Обновите страницу в браузере — галерея подтянет файлы автоматически.
-
-Рекомендации по изображениям:
-
-- используйте `.jpg`/`.jpeg` для фото, `.png` для графики,
-- давайте понятные имена (`001.jpg`, `002.jpg`), чтобы сортировка была стабильной.
+1. Загрузите изображения через `/yakauleu` → категория → “Добавить изображения”.  
+   Файлы сохраняются в `public/gallery/<slug>/...`, а метаданные — в `category_images`.
+2. При необходимости можно загрузить файлы вручную по SSH, но тогда нужно добавить записи в БД.
 
 ---
 
@@ -212,7 +227,7 @@ server {
 
 - Сайт не хранит заявки и не использует серверные формы.
 - Коммуникация и приём заказов — через Telegram/Instagram.
-- Конфигуратор `/configurator` генерирует текст и помогает передать его в мессенджер, без отправки данных на сервер.
+- Заявка `/configurator` генерирует текст и помогает передать его в мессенджер, без отправки данных на сервер.
 - По умолчанию аналитика и трекеры не подключены.
 
 ---

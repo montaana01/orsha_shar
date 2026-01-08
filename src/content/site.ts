@@ -11,6 +11,7 @@ export const site = {
   },
   socials: {
     instagram: 'https://instagram.com/orsha_shar',
+    instagramDm: 'https://ig.me/m/orsha_shar',
     vk: 'https://vk.com/orsha_shar',
     ok: 'https://ok.ru/orsha_shar',
     telegram: process.env.NEXT_PUBLIC_TELEGRAM_URL ?? 'https://t.me/orshashar'

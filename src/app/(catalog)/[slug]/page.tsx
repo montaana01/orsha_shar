@@ -1,22 +1,21 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import { categories, categoryBySlug, type CategorySlug } from '@/content/categories';
-import { site } from '@/content/site';
-import { listGalleryImages } from '@/lib/gallery';
+import { site, telHref } from '@/content/site';
+import { getCategoryImagesBySlug } from '@/lib/data';
+import { getPublicCategoryBySlug } from '@/lib/public-data';
 import { Button } from '@/components/Button';
 import { Gallery } from '@/components/Gallery';
 
-type Params = { slug: CategorySlug };
-type Props = { params: Promise<Params> };
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
-export function generateStaticParams(): Array<{ slug: CategorySlug }> {
-  return categories.map((c) => ({ slug: c.slug }));
-}
+type Params = { slug: string };
+type Props = { params: Promise<Params> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const category = categoryBySlug(slug);
+  const category = await getPublicCategoryBySlug(slug);
   if (!category) return {};
 
   const url = `${site.url}/${category.slug}`;
@@ -36,10 +35,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CategoryPage({ params }: Props) {
   const { slug } = await params;
-  const category = categoryBySlug(slug);
-  if (!category) notFound();
+  const category = await getPublicCategoryBySlug(slug);
+  if (!category || !category.visible) notFound();
 
-  const images = listGalleryImages(category.slug);
+  const images = await getCategoryImagesBySlug(category.slug).catch(() => []);
+  const imageUrls = images.map((img) => img.url);
 
   return (
     <>
@@ -49,7 +49,12 @@ export default async function CategoryPage({ params }: Props) {
             <h1 className="pageHead__title">{category.title}</h1>
             <p className="pageHead__subtitle">{category.description}</p>
             <div className="pageHead__actions">
-              <Button href={site.socials.instagram} external variant="primary">
+              {site.contacts.phones[0] ? (
+                <a className="btn btn--secondary" href={telHref(site.contacts.phones[0])}>
+                  Позвонить
+                </a>
+              ) : null}
+              <Button href={site.socials.instagramDm} external variant="primary">
                 Заказать в Instagram
               </Button>
               {site.socials.telegram ? (
@@ -76,16 +81,18 @@ export default async function CategoryPage({ params }: Props) {
         </div>
       </section>
 
-      <section className="section">
-        <div className="section__head">
-          <h2 className="section__title">Фото</h2>
-          <p className="section__subtitle">Примеры работ. Можно использовать как референсы при заказе.</p>
-        </div>
-        <Gallery images={images} altPrefix={category.title} />
-      </section>
+      {imageUrls.length ? (
+        <section className="section">
+          <div className="section__head">
+            <h2 className="section__title">Фото</h2>
+            <p className="section__subtitle">Примеры работ. Можно использовать как референсы при заказе.</p>
+          </div>
+          <Gallery images={imageUrls} altPrefix={category.title} />
+        </section>
+      ) : null}
 
       <section className="section">
-        <div className="panel panel--cta">
+        <div className="panel panel--service">
           <div>
             <h3 className="panel__title">Сформировать заявку</h3>
             <p className="muted">

@@ -1,10 +1,14 @@
 import type { MetadataRoute } from 'next';
-import { categories } from '@/content/categories';
 import { site } from '@/content/site';
+import { getPublicCategories } from '@/lib/public-data';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const staticRoutes = ['', '/configurator', '/privacy'];
+  const staticRoutes = ['', '/configurator', '/inscription', '/privacy'];
+  const categories = await getPublicCategories();
 
   return [
     ...staticRoutes.map((path) => ({

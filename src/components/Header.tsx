@@ -5,12 +5,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef } from 'react';
 
-import { categories } from '@/content/categories';
+import type { Category } from '@/lib/data';
 import { site } from '@/content/site';
 
 type NavItem = { href: string; label: string };
 
-export function Header() {
+export function Header({ categories }: { categories: Category[] }) {
   const pathname = usePathname();
   const catalogRef = useRef<HTMLDetailsElement | null>(null);
   const mobileRef = useRef<HTMLDetailsElement | null>(null);
@@ -18,9 +18,9 @@ export function Header() {
   const navItems: NavItem[] = useMemo(
     () => [
       ...categories.map((c) => ({ href: `/${c.slug}`, label: c.title })),
-      { href: '/configurator', label: 'Конфигуратор' }
+      { href: '/configurator', label: 'Заявка' }
     ],
-    []
+    [categories]
   );
 
   const closeMenus = () => {
@@ -39,7 +39,7 @@ export function Header() {
       <div className="container header__inner">
         <Link href="/" className="header__brand" aria-label={`${site.name} — главная`}>
           <span className="header__mark" aria-hidden="true">
-            <Image src="/assets/logo.webp" alt="" width={36} height={36} priority />
+            <Image src="/assets/orsha-shar.webp" alt="Orsha-shar" width={60} height={60} sizes="60px" quality={60} priority />
           </span>
           <span className="header__brandText">
             <span className="header__brandName">{site.name}</span>
@@ -88,16 +88,20 @@ export function Header() {
             className={`nav__link ${isActive('/configurator') ? 'nav__link--active' : ''}`}
             aria-current={isActive('/configurator') ? 'page' : undefined}
           >
-            Конфигуратор
+            Заявка
           </Link>
 
           <a className="nav__link nav__link--cta" href={site.socials.telegram} target="_blank" rel="noopener noreferrer">
             Telegram
           </a>
 
-          <a className="nav__link" href="#contacts" onClick={closeMenus}>
-            Контакты
-          </a>
+          <Link
+            href="/inscription"
+            className={`nav__link ${isActive('/inscription') ? 'nav__link--active' : ''}`}
+            aria-current={isActive('/inscription') ? 'page' : undefined}
+          >
+            Конструктор надписи
+          </Link>
         </nav>
 
         <details className="nav nav--mobile" ref={mobileRef}>
@@ -137,9 +141,15 @@ export function Header() {
                   </Link>
                 );
               })}
-              <a href="#contacts" className="nav__panelLink" onClick={closeMenus}>
-                Контакты
-              </a>
+              <Link
+                href="/inscription"
+                className={`nav__panelLink ${isActive('/inscription') ? 'nav__panelLink--active' : ''}`}
+                aria-current={isActive('/inscription') ? 'page' : undefined}
+                prefetch={false}
+                onClick={closeMenus}
+              >
+                Конструктор надписи
+              </Link>
             </div>
           </div>
         </details>
