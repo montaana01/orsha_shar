@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import { CategoryGrid } from '@/components/CategoryGrid';
 import { Button } from '@/components/Button';
@@ -7,6 +8,11 @@ import { getPublicCategories } from '@/lib/public-data';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+export const metadata: Metadata = {
+  title: 'Гелиевые и воздушные шары в Орше — оформление и фотозоны',
+  description:
+    'Оформление праздников в Орше: гелиевые шары, фотозоны и композиции, доставка по городу. Подберем оформление под вашу дату, цвета и бюджет.',
+};
 
 export default async function HomePage() {
   const categories = await getPublicCategories({ allowFallback: false });
@@ -28,6 +34,36 @@ export default async function HomePage() {
       addressCountry: site.country,
     },
     sameAs: [site.socials.instagram, site.socials.vk, site.socials.ok].filter(Boolean),
+  };
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'Сколько стоит оформление шарами?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Цена зависит от объема, состава (латекс/фольга), цветов и доставки. Напишите дату, формат и бюджет — предложим варианты.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Есть ли доставка по Орше?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Да, доставляем по Орше и Оршанскому району. По району доставка возможна за доплату — условия уточним при заказе.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Можно ли сделать заказ срочно?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Да, если есть свободное окно и материалы в наличии. Лучше написать заранее — так больше вариантов по стилю.',
+        },
+      },
+    ],
   };
 
   return (
@@ -210,6 +246,10 @@ export default async function HomePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
     </>
   );
