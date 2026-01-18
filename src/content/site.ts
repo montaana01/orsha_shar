@@ -1,5 +1,5 @@
 export const site = {
-  name: 'Орша Шар | Оформление шарами в Орше | Гелиевые шары в Орше',
+  name: 'ORSHA SHAR',
   legalName: 'Орша Шар | Оформление шарами в Орше | Гелиевые шары в Орше',
   defaultLocale: 'ru-BY',
   alternateName: ['Orsha Shar', 'ORSHA SHAR', 'Орша Шар', 'ОРША ШАР'],
