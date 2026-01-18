@@ -1,7 +1,8 @@
 export const site = {
-  name: 'ORSHA SHAR',
-  legalName: 'Orsha Shar',
+  name: 'Орша Шар | Оформление шарами в Орше | Гелиевые шары в Орше',
+  legalName: 'Орша Шар | Оформление шарами в Орше | Гелиевые шары в Орше',
   defaultLocale: 'ru-BY',
+  alternateName: ['Orsha Shar', 'ORSHA SHAR', 'Орша Шар', 'ОРША ШАР'],
   city: 'Орша',
   country: 'BY',
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://orsha-shar.by',

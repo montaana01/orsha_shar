@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Политика конфиденциальности',
-  description: 'Как ORSHA SHAR обрабатывает персональные данные и техническую информацию.',
+  description: 'Как Орша Шар обрабатывает персональные данные и техническую информацию.',
 };
 
 export default function PrivacyPage() {

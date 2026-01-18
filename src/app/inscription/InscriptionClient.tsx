@@ -2096,7 +2096,7 @@ export function InscriptionClient({
       <div className="section__head">
         <h1 className="section__title">Надпись онлайн</h1>
         <p className="section__subtitle">
-          Сделайте макет надписи для шара, фольгированной звезды, сердца, круга или bubble.
+          Сделайте макет надписи для шара, фольгированной звезды, сердца, круга или шара Баблс.
           Добавляйте несколько слоёв текста, настраивайте шрифт и цвет, скачайте превью и файл для
           плоттера.
         </p>
@@ -2246,14 +2246,14 @@ export function InscriptionClient({
                   <>
                     {totalWeightG.toFixed(2)} г / лимит {payloadLimit.toFixed(2)} г{' '}
                     {payloadOk ? (
-                      <span className="ok">OK</span>
+                      <span className="ok">ОК</span>
                     ) : (
                       <span className="bad">Слишком много</span>
                     )}
                   </>
                 ) : (
                   <>
-                    {totalWeightG.toFixed(2)} г / без лимита <span className="ok">OK</span>
+                    {totalWeightG.toFixed(2)} г / без лимита <span className="ok">ОК</span>
                   </>
                 )}
               </div>

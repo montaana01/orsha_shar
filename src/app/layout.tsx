@@ -25,11 +25,12 @@ export const metadata: Metadata = {
   description: 'Гелиевые шары, фотозоны, украшения для торжеств в Орше.',
   icons: {
     icon: [
+      { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
       { url: '/favicon/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/favicon/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [{ url: '/favicon/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' }],
-    shortcut: '/favicon/web-app-manifest-192x192.png',
+    shortcut: '/favicon.ico',
   },
   openGraph: {
     type: 'website',

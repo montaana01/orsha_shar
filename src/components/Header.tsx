@@ -41,7 +41,7 @@ export function Header({ categories }: { categories: Category[] }) {
           <span className="header__mark" aria-hidden="true">
             <Image
               src="/assets/orsha-shar.webp"
-              alt="Orsha-shar"
+              alt="Орша Шар"
               width={60}
               height={60}
               sizes="60px"

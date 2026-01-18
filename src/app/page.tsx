@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: 'Гелиевые и воздушные шары в Орше — оформление и фотозоны',
   description:
     'Оформление праздников в Орше: гелиевые шары, фотозоны и композиции, доставка по городу. Подберем оформление под вашу дату, цвета и бюджет.',
+  alternates: { canonical: '/' },
 };
 
 export default async function HomePage() {
@@ -93,7 +94,7 @@ export default async function HomePage() {
             <div className="hero__media">
               <Image
                 src="/assets/hero-desk.webp"
-                alt="Примеры работ ORSHA SHAR"
+                alt="Примеры работ Орша Шар"
                 width={1400}
                 height={1000}
                 priority
@@ -141,7 +142,7 @@ export default async function HomePage() {
                   </li>
                   <li>Цифры — стильный акцент для дня рождения/юбилея</li>
                   <li>Тематические украшения — свадьбы, выпускные, линейки, выписка из роддома</li>
-                  <li>Шары Bubbles — шар-гигант с надписью и наполнением</li>
+                  <li>Шары Баблс — шар-гигант с надписью и наполнением</li>
                 </ul>
               </div>
             </div>
@@ -231,7 +232,7 @@ export default async function HomePage() {
           <div className="panel panel--service">
             <h3 className="panel__title">Конструктор надписи</h3>
             <p className="muted">
-              Соберите надпись для шара, звезды, сердца, круга (фольга) или bubble и скачайте
+              Соберите надпись для шара, звезды, сердца, круга (фольга) или шара Баблс и скачайте
               превью.
             </p>
             <div className="hero__actions" style={{ marginTop: 12 }}>

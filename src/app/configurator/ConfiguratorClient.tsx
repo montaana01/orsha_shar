@@ -74,7 +74,7 @@ export function ConfiguratorClient({
     const parts = [formattedDate, timeLabel].filter(Boolean).join(', ');
     const dateLine = parts ? `Дата/время: ${parts}` : '';
     const lines = [
-      'Заявка с сайта ORSHA SHAR',
+      'Заявка с сайта Орша Шар',
       `Категория: ${typeLabel}`,
       ...(occasion ? [`Событие/повод: ${occasion}`] : []),
       ...(dateLine ? [dateLine] : []),

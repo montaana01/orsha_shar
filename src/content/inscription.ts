@@ -4,7 +4,7 @@ export const PRODUCT_LABEL: Record<ProductType, string> = {
   foilStar: 'Звезда (фольга)',
   foilHeart: 'Сердце (фольга)',
   foilCircle: 'Круг (фольга)',
-  bubble: 'Шар Bubbles',
+  bubble: 'Шар Баблс',
   box: 'Коробка сюрприз',
 };
 

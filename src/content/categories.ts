@@ -62,8 +62,8 @@ export const categories: Category[] = [
   },
   {
     slug: 'bubbles',
-    title: 'Шары Bubbles',
-    description: 'Шар Bubbles — стильный шар-гигант с надписью и наполнением.',
+    title: 'Шары Баблс',
+    description: 'Шар Баблс — стильный шар-гигант с надписью и наполнением.',
     heroImage: '/gallery/bubbles/hero.webp',
   },
 ];
