@@ -25,12 +25,12 @@ export const metadata: Metadata = {
   description: 'Гелиевые шары, фотозоны, украшения для торжеств в Орше.',
   icons: {
     icon: [
-      { url: '/favicon.ico', type: 'image/x-icon' },
+      { url: '/favicon.png', sizes: '192x192', type: 'image/png' },
       { url: '/favicon/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/favicon/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [{ url: '/favicon/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png' }],
-    shortcut: '/favicon.ico',
+    shortcut: '/favicon.png',
   },
   openGraph: {
     type: 'website',
@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ru" data-scroll-behavior="smooth">
       <head>
-        <link rel="icon" href="https://orsha-shar.by/favicon.ico" type="image/x-icon" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
         <meta name="apple-mobile-web-app-title" content="Орша Шар" />
         <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://www.google-analytics.com" crossOrigin="anonymous" />
